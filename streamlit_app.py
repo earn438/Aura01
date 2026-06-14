@@ -94,28 +94,35 @@ if my_model:
     hist_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
     df['is_vape'] = my_model.predict(hist_features)
     
-    # Filter for only detected rows first
+    # Filter for only detected rows
     vape_rows = df[df['is_vape'] == 1].copy()
     
     if not vape_rows.empty:
-        # Create blocks only from the detected rows
+        # Create blocks: A new block starts if the gap is > 5 minutes
+        vape_rows = vape_rows.sort_values('Display_Time')
         vape_rows['block'] = (vape_rows['Display_Time'].diff() > pd.Timedelta(minutes=5)).cumsum()
         
-        for _, group in vape_rows.groupby('block'):
+        # Group and reverse to show latest detections at the top
+        grouped_vape = vape_rows.groupby('block')
+        for _, group in reversed(list(grouped_vape)):
             start_time = group['Display_Time'].min().strftime('%H:%M')
             end_time = group['Display_Time'].max().strftime('%H:%M')
             date_str = group['Display_Time'].min().strftime('%Y-%m-%d')
             
-            # Format display
-            time_range = f"{start_time} - {end_time}"
+            # If the start and end are the same (single reading), just show the time
+            if start_time == end_time:
+                time_range = f"at {start_time}"
+            else:
+                time_range = f"from {start_time} to {end_time}"
+            
             st.markdown(
-                f"<div style='color: #ff4b4b; font-weight: bold; padding: 5px; border-left: 5px solid #ff4b4b; margin-bottom: 5px;'>"
-                f"🚨 Vape Detected: {date_str} at {time_range}"
+                f"<div style='color: #ff4b4b; font-weight: bold; padding: 10px; border-left: 5px solid #ff4b4b; background-color: #fff0f0; margin-bottom: 10px; border-radius: 4px;'>"
+                f"🚨 Vape Detected: {date_str} {time_range}"
                 f"</div>", 
                 unsafe_allow_html=True
             )
     else:
-        st.write("No vape events detected in the available data.")
+        st.info("No vape events detected in the available data.")
 # --- METRICS & GRAPHS ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Temp", f"{latest['Temp'].values[0]} °C")

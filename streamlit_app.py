@@ -1,26 +1,55 @@
 import streamlit as st
 import pandas as pd
 
-# Set page configuration
+# --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="VapeRadar Dashboard", page_icon="🚭", layout="wide")
 
-# Header
-st.title("🚭 VapeRadar Dashboard")
-st.markdown("**Real-Time Vape Detection Monitoring**")
-st.divider()
-
-# --- 1. CONNECT TO GOOGLE SHEETS ---
 # Your published CSV link
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
 
+# --- SIDEBAR (Settings & Refresh) ---
+with st.sidebar:
+    st.header("⚙️ Alert Settings")
+    st.write("Adjust the thresholds that trigger a vape detection alert.")
+    tvoc_limit = st.slider("TVOC Alert Threshold (ppb)", min_value=100, max_value=1000, value=300, step=50)
+    pm_limit = st.slider("PM2.5 Alert Threshold (μg/m³)", min_value=10.0, max_value=100.0, value=35.0, step=5.0)
+    
+    st.divider()
+    st.write("Data refreshes automatically, but you can force an update below.")
+    if st.button("🔄 Force Refresh Data"):
+        st.cache_data.clear() # Clears the 30-second cache to pull instantly
+
+# --- DATA LOADING FUNCTION ---
 @st.cache_data(ttl=30)
 def load_sensor_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        # Ensure the Timestamp column exists and is readable
+        
+        # 1. Rename the messy columns from the hardware
+        column_mapping = {
+            "Unnamed: 0": "Timestamp",
+            "tvoc": "TVOC",
+            "eco2": "eCO2",
+            "temp": "Temp",
+            "humidity": "Humidity",
+            "ch0": "CH0",
+            "ch3": "CH3",
+            "mq135": "MQ135",
+            "2.5": "PM2.5",
+            "10": "PM10"
+        }
+        df = df.rename(columns=column_mapping)
+        
+        # 2. Clean up weird hardware outputs
+        if "Unnamed: 1" in df.columns:
+            df = df.drop(columns=["Unnamed: 1"])
+            
+        # 3. Format Date/Time and Sort
         if 'Timestamp' in df.columns:
-            df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+            df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+            df = df.dropna(subset=['Timestamp']) # Remove any rows with broken dates
             df = df.sort_values(by='Timestamp', ascending=False)
+            
         return df
     except Exception as e:
         st.error(f"Failed to load data: {e}")
@@ -28,62 +57,86 @@ def load_sensor_data():
 
 # Load the live data
 df = load_sensor_data()
-# --- DEBUGGING BLOCK ---
-st.warning("🔍 **Debug Mode Active:** Here is the raw data Streamlit is receiving:")
-st.dataframe(df)
-st.write("🔍 **Exact Column Headers Found:**")
-st.write(df.columns.tolist())
-st.divider()
-# -----------------------
-# --- 2. DISPLAY LIVE SUMMARY METRICS ---
-if not df.empty:
-    latest_reading = df.iloc[0]
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric(label="Latest Temp", value=f"{latest_reading.get('Temp', 'N/A')} °C")
-    with col2:
-        st.metric(label="Latest Humidity", value=f"{latest_reading.get('Humidity', 'N/A')} %")
-    with col3:
-        st.metric(label="TVOC Level", value=f"{latest_reading.get('TVOC', 'N/A')} ppb")
-    with col4:
-        st.metric(label="PM 2.5", value=f"{latest_reading.get('PM2.5', 'N/A')} μg/m³")
-        
-    st.caption(f"Last updated: {latest_reading.get('Timestamp', 'Unknown time')}")
+
+# --- MAIN DASHBOARD HEADER ---
+st.title("🚭 VapeRadar Dashboard")
+st.markdown("**Real-Time Vape Detection Monitoring**")
+
+# Stop the app right here if the sheet is empty
+if df.empty:
+    st.warning("No data found. Please check your Google Sheet connection.")
+    st.stop()
+
+# --- ALERT SYSTEM ---
+latest = df.iloc[0]
+alerts_triggered = []
+
+# Check if latest readings cross our sidebar thresholds
+if latest.get('TVOC', 0) > tvoc_limit:
+    alerts_triggered.append(f"High TVOC ({latest['TVOC']} ppb)")
+if latest.get('PM2.5', 0) > pm_limit:
+    alerts_triggered.append(f"High PM2.5 ({latest['PM2.5']} μg/m³)")
+
+if alerts_triggered:
+    st.error(f"🚨 **VAPE WARNING TRIGGERED:** " + " | ".join(alerts_triggered))
 else:
-    st.warning("No data found. Please check your Google Sheet link or data formatting.")
+    st.success("✅ **Air Quality Normal:** No significant vapor detected in the last reading.")
 
 st.divider()
 
-# --- 3. SHOW THE FULL DATA HISTORY ---
-st.subheader("📊 Live Sensor History")
-st.markdown("This table updates automatically from your Google Sheet every 30 seconds.")
-st.dataframe(df, use_container_width=True, hide_index=True)
+# --- LIVE METRICS WITH TRENDS ---
+st.subheader("📡 Live Sensor Data")
 
+col1, col2, col3, col4 = st.columns(4)
+
+# Calculate trends (Deltas) by comparing row 0 (latest) with row 1 (previous)
+if len(df) > 1:
+    prev = df.iloc[1]
+    delta_temp = round(latest.get('Temp', 0) - prev.get('Temp', 0), 2)
+    delta_hum = round(latest.get('Humidity', 0) - prev.get('Humidity', 0), 2)
+    delta_tvoc = int(latest.get('TVOC', 0) - prev.get('TVOC', 0))
+    delta_pm = round(latest.get('PM2.5', 0) - prev.get('PM2.5', 0), 2)
+else:
+    delta_temp = delta_hum = delta_tvoc = delta_pm = None
+
+with col1:
+    st.metric(label="Latest Temp", value=f"{latest.get('Temp', 'N/A')} °C", delta=delta_temp)
+with col2:
+    st.metric(label="Latest Humidity", value=f"{latest.get('Humidity', 'N/A')} %", delta=delta_hum)
+with col3:
+    # delta_color="inverse" makes increases RED (bad) and decreases GREEN (good)
+    st.metric(label="TVOC Level", value=f"{latest.get('TVOC', 'N/A')} ppb", delta=delta_tvoc, delta_color="inverse")
+with col4:
+    st.metric(label="PM 2.5", value=f"{latest.get('PM2.5', 'N/A')} μg/m³", delta=delta_pm, delta_color="inverse")
+    
+st.caption(f"Last updated: {latest.get('Timestamp', 'Unknown time')}")
 st.divider()
 
-# --- 4. VISUALIZE THE DATA ---
+# --- DATA VISUALIZATION TABS ---
 st.subheader("📈 Environmental Trends")
 
-if not df.empty and 'Timestamp' in df.columns:
-    # Set the index to Timestamp for Streamlit charts
+if 'Timestamp' in df.columns:
     chart_data = df.set_index('Timestamp')
     
-    # Create tabs to organize the charts neatly
-    tab1, tab2, tab3 = st.tabs(["🌬️ Air Quality (TVOC & eCO2)", "🌡️ Climate (Temp & Humidity)", "🌫️ Particulates & Gas (PM, MQ135)"])
+    tab1, tab2, tab3 = st.tabs(["🌫️ Particles & Gas (Vape Indicators)", "🌬️ Air Quality (TVOC & eCO2)", "🌡️ Climate (Temp & Humidity)"])
     
     with tab1:
-        # Check if columns exist before plotting to prevent errors
-        cols_to_plot = [col for col in ['TVOC', 'eCO2'] if col in chart_data.columns]
+        cols_to_plot = [col for col in ['PM2.5', 'PM10', 'MQ135', 'CH0', 'CH3'] if col in chart_data.columns]
         if cols_to_plot:
             st.line_chart(chart_data[cols_to_plot])
             
     with tab2:
-        cols_to_plot = [col for col in ['Temp', 'Humidity'] if col in chart_data.columns]
+        cols_to_plot = [col for col in ['TVOC', 'eCO2'] if col in chart_data.columns]
         if cols_to_plot:
             st.line_chart(chart_data[cols_to_plot])
             
     with tab3:
-        cols_to_plot = [col for col in ['PM2.5', 'PM10', 'MQ135', 'CH0', 'CH3'] if col in chart_data.columns]
+        cols_to_plot = [col for col in ['Temp', 'Humidity'] if col in chart_data.columns]
         if cols_to_plot:
             st.line_chart(chart_data[cols_to_plot])
+
+st.divider()
+
+# --- RAW DATA TABLE ---
+with st.expander("📊 View Raw Sensor Data"):
+    st.dataframe(df, use_container_width=True, hide_index=True)

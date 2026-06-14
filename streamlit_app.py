@@ -94,21 +94,20 @@ if my_model:
     hist_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
     df['is_vape'] = my_model.predict(hist_features)
     
-    # Identify continuous blocks
-    # Detects changes in state to group consecutive '1's
-    df['block'] = (df['is_vape'] != df['is_vape'].shift()).cumsum()
-    vape_blocks = df[df['is_vape'] == 1].groupby('block')
+    # Filter for only detected rows first
+    vape_rows = df[df['is_vape'] == 1].copy()
     
-    if not vape_blocks.empty:
-        for _, group in vape_blocks:
+    if not vape_rows.empty:
+        # Create blocks only from the detected rows
+        vape_rows['block'] = (vape_rows['Display_Time'].diff() > pd.Timedelta(minutes=5)).cumsum()
+        
+        for _, group in vape_rows.groupby('block'):
             start_time = group['Display_Time'].min().strftime('%H:%M')
             end_time = group['Display_Time'].max().strftime('%H:%M')
             date_str = group['Display_Time'].min().strftime('%Y-%m-%d')
             
-            # Format the time string (e.g., "16:00 - 17:00")
+            # Format display
             time_range = f"{start_time} - {end_time}"
-            
-            # Display as red text with description
             st.markdown(
                 f"<div style='color: #ff4b4b; font-weight: bold; padding: 5px; border-left: 5px solid #ff4b4b; margin-bottom: 5px;'>"
                 f"🚨 Vape Detected: {date_str} at {time_range}"

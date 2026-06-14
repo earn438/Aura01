@@ -126,4 +126,27 @@ if 'Timestamp' in df.columns:
     # 4. Resample (average into 1-minute buckets) and Interpolate (fill gaps)
     # We only apply this to numeric columns so strings don't break the math
     numeric_cols = chart_data.select_dtypes(include='number').columns
-    chart_data = chart_data[numeric_cols].res
+    chart_data = chart_data[numeric_cols].resample('1min').mean().interpolate(method='time')
+    
+    tab1, tab2, tab3 = st.tabs(["🌫️ Particles & Gas (Vape Indicators)", "🌬️ Air Quality (TVOC & eCO2)", "🌡️ Climate (Temp & Humidity)"])
+    
+    with tab1:
+        cols_to_plot = [col for col in ['PM2.5', 'PM10', 'MQ135', 'CH0', 'CH3'] if col in chart_data.columns]
+        if cols_to_plot:
+            st.line_chart(chart_data[cols_to_plot])
+            
+    with tab2:
+        cols_to_plot = [col for col in ['TVOC', 'eCO2'] if col in chart_data.columns]
+        if cols_to_plot:
+            st.line_chart(chart_data[cols_to_plot])
+            
+    with tab3:
+        cols_to_plot = [col for col in ['Temp', 'Humidity'] if col in chart_data.columns]
+        if cols_to_plot:
+            st.line_chart(chart_data[cols_to_plot])
+
+st.divider()
+
+# --- RAW DATA TABLE ---
+with st.expander("📊 View Raw Sensor Data"):
+    st.dataframe(df, use_container_width=True, hide_index=True)

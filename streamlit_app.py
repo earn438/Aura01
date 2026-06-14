@@ -36,34 +36,40 @@ def load_and_process():
 
 df = load_and_process()
 
-# --- 3. PREDICTION LOGIC ---
+# --- 3. UI: STATUS & PREDICTION ---
 st.title(f"🚭 {MODEL_NAME} Dashboard")
+
+# Define mapping for model
 mapping_dict = {
     'TVOC': 'col_2', 'eCO2': 'col_3', 'Temp': 'col_4', 
     'Humidity': 'col_5', 'PM2.5': 'col_6', 'CH0': 'col_7', 
     'CH3': 'col_8', 'MQ135': 'col_9'
 }
 
+# Run prediction for the WHOLE dataset for history
+all_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
 if my_model:
-    all_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
     df['Vape_Prediction'] = my_model.predict(all_features)
+    latest = df.iloc[0]
     
-    if df.iloc[0]['Vape_Prediction'] == 1:
+    # Status Banner
+    if latest['Vape_Prediction'] == 1:
         st.error("🚨 VAPE DETECTED: AI Model indicates vape particles!")
     else:
         st.success("✅ AIR QUALITY: Clean.")
 else:
     st.info("ℹ️ Prediction system offline.")
 
-# --- 4. HISTORY LOG ---
-st.subheader("📜 Recent Vape Detection Events")
-history = df[(df['Vape_Prediction'] == 1) & (df['Sort_Time'] >= (df['Sort_Time'].max() - pd.Timedelta(days=1)))]
-history_display = history[['Display_Time', 'TVOC', 'PM2.5']]
+# --- 4. VAPE EVENT LOG ---
+st.subheader("📜 Vape Detection History")
+# Filter where prediction == 1
+events = df[df['Vape_Prediction'] == 1][['Display_Time', 'TVOC', 'PM2.5']]
 
-if not history_display.empty:
-    st.table(history_display.head(10))
+if not events.empty:
+    st.write("The model identified vape activity at these times:")
+    st.table(events.head(5)) # Shows the 5 most recent events
 else:
-    st.write("No vape events detected in the last 24 hours.")
+    st.write("No vape events detected yet.")
 
 # --- 5. METRICS & GRAPHS ---
 latest = df.iloc[0]

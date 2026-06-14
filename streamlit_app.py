@@ -28,7 +28,13 @@ def load_sensor_data():
 
 # Load the live data
 df = load_sensor_data()
-
+# --- DEBUGGING BLOCK ---
+st.warning("🔍 **Debug Mode Active:** Here is the raw data Streamlit is receiving:")
+st.dataframe(df)
+st.write("🔍 **Exact Column Headers Found:**")
+st.write(df.columns.tolist())
+st.divider()
+# -----------------------
 # --- 2. DISPLAY LIVE SUMMARY METRICS ---
 if not df.empty:
     latest_reading = df.iloc[0]

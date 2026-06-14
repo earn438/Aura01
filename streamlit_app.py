@@ -5,7 +5,7 @@ import os
 
 # --- CONFIGURATION ---
 MODEL_PATH = 'models/rf_model_unified.joblib'
-MODEL_NAME = "VapeGuard AI v1.0"
+MODEL_NAME = "Aurafarm AI"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
 
 st.set_page_config(page_title=MODEL_NAME, page_icon="🚭", layout="wide")

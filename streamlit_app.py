@@ -86,7 +86,29 @@ if my_model:
         st.write("Model expects these feature names:", my_model.feature_names_in_)
 else:
     st.info("ℹ️ Prediction system offline.")
-
+# --- 5. VAPE DETECTION HISTORY ---
+if my_model:
+    st.subheader("⚠️ Detection History")
+    
+    # Prepare historical data for prediction
+    # We use the same feature mapping and selection as the latest row
+    hist_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
+    
+    # Run prediction on full history
+    df['is_vape'] = my_model.predict(hist_features)
+    
+    # Filter for detected events
+    vape_events = df[df['is_vape'] == 1].copy()
+    
+    if not vape_events.empty:
+        # Display the formatted timestamps
+        st.write("Vape particles were detected at the following times:")
+        st.dataframe(
+            vape_events[['Display_Time']].sort_values(by='Display_Time', ascending=False),
+            use_container_width=True
+        )
+    else:
+        st.write("No vape events detected in the available data.")
 # --- METRICS & GRAPHS ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Temp", f"{latest['Temp'].values[0]} °C")

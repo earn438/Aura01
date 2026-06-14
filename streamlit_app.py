@@ -35,12 +35,9 @@ def load_and_process():
     return df
 
 df = load_and_process()
-latest = df.iloc[0].to_frame().T
 
 # --- 3. PREDICTION LOGIC ---
 st.title(f"🚭 {MODEL_NAME} Dashboard")
-
-# Mapping dictionary for model inputs
 mapping_dict = {
     'TVOC': 'col_2', 'eCO2': 'col_3', 'Temp': 'col_4', 
     'Humidity': 'col_5', 'PM2.5': 'col_6', 'CH0': 'col_7', 
@@ -48,11 +45,9 @@ mapping_dict = {
 }
 
 if my_model:
-    # Run prediction for every row to find history
     all_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
     df['Vape_Prediction'] = my_model.predict(all_features)
     
-    # Check latest
     if df.iloc[0]['Vape_Prediction'] == 1:
         st.error("🚨 VAPE DETECTED: AI Model indicates vape particles!")
     else:
@@ -62,16 +57,23 @@ else:
 
 # --- 4. HISTORY LOG ---
 st.subheader("📜 Recent Vape Detection Events")
-# Filter for 24 hours and predictions of 1
-history = df[(df['Vape_Prediction'] == 1) & (df['Sort_Time'] >= (df['Sort_Time'].max() - pd.Timedelta(days=1))]
-history = history[['Display_Time', 'TVOC', 'PM2.5']]
+history = df[(df['Vape_Prediction'] == 1) & (df['Sort_Time'] >= (df['Sort_Time'].max() - pd.Timedelta(days=1)))]
+history_display = history[['Display_Time', 'TVOC', 'PM2.5']]
 
-if not history.empty:
-    st.table(history.head(10)) # Show latest 10 events
+if not history_display.empty:
+    st.table(history_display.head(10))
 else:
     st.write("No vape events detected in the last 24 hours.")
 
-# --- 5. GRAPHS ---
+# --- 5. METRICS & GRAPHS ---
+latest = df.iloc[0]
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Temp", f"{latest['Temp']} °C")
+col2.metric("Humidity", f"{latest['Humidity']} %")
+col3.metric("TVOC", f"{latest['TVOC']} ppb")
+col4.metric("PM 2.5", f"{latest['PM2.5']} μg/m³")
+
 st.divider()
 st.subheader("📈 Trends")
-# (Graphs code remains same as previous version)
+chart_data = df.set_index('Sort_Time').sort_index()
+st.line_chart(chart_data[['PM2.5', 'TVOC']])

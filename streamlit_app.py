@@ -1,24 +1,31 @@
 import streamlit as st
 import pandas as pd
+import joblib  # Change to tensorflow or torch if needed
 
-# --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="VapeRadar Dashboard", page_icon="🚭", layout="wide")
-
+# --- CONFIGURATION ---
+MODEL_PATH = 'models/vape_model.pkl'
+MODEL_NAME = "VapeGuard AI v1.0"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
 
-# --- DATA LOADING ---
+st.set_page_config(page_title=MODEL_NAME, page_icon="🚭", layout="wide")
+
+# --- 1. LOAD MODEL (Cached) ---
+@st.cache_resource
+def load_model():
+    # Load your pre-trained model file
+    return joblib.load(MODEL_PATH)
+
+my_model = load_model()
+
+# --- 2. DATA LOADING ---
 @st.cache_data(ttl=30)
 def load_sensor_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        # Rename your existing columns
         column_mapping = {
             "Unnamed: 0": "Timestamp", "tvoc": "TVOC", "eco2": "eCO2",
             "temp": "Temp", "humidity": "Humidity", "ch0": "CH0",
-            "ch3": "CH3", "mq135": "MQ135", "2.5": "PM2.5", "10": "PM10",
-            # Assuming your model output column in the sheet is named "model_output"
-            # Change "model_output" to whatever your column header actually is
-            "model_output": "Vape_Detected" 
+            "ch3": "CH3", "mq135": "MQ135", "2.5": "PM2.5", "10": "PM10"
         }
         df = df.rename(columns=column_mapping)
         if "Unnamed: 1" in df.columns: df = df.drop(columns=["Unnamed: 1"])
@@ -35,32 +42,32 @@ def load_sensor_data():
 
 df = load_sensor_data()
 
-# --- DASHBOARD ---
-st.title("🚭 VapeRadar Dashboard")
-
+# --- 3. DASHBOARD UI ---
+st.title(f"🚭 {MODEL_NAME} Dashboard")
 if df.empty:
     st.warning("No data found.")
     st.stop()
 
-latest = df.iloc[0]
+latest = df.iloc[0].to_frame().T
 
-# --- VAPE DETECTION LOGIC ---
-# Get the model output (ensure the column name matches your sheet)
-vape_status = latest.get('Vape_Detected', 0)
+# --- 4. RUN MODEL PREDICTION ---
+# Ensure columns match your training data exactly
+features = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5']]
+prediction = my_model.predict(features)[0]
 
-if vape_status == 1:
-    st.error("🚨 VAPE DETECTED: The model has identified vape particles in the air!")
+if prediction == 1:
+    st.error("🚨 VAPE DETECTED: AI Model indicates vape particles!")
 else:
-    st.success("✅ AIR QUALITY: No vape detected.")
+    st.success("✅ AIR QUALITY: Clean.")
 
 # --- METRICS ---
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Temp", f"{latest.get('Temp', 'N/A')} °C")
-col2.metric("Humidity", f"{latest.get('Humidity', 'N/A')} %")
-col3.metric("TVOC", f"{latest.get('TVOC', 'N/A')} ppb")
-col4.metric("PM 2.5", f"{latest.get('PM2.5', 'N/A')} μg/m³")
+col1.metric("Temp", f"{latest['Temp'].values[0]} °C")
+col2.metric("Humidity", f"{latest['Humidity'].values[0]} %")
+col3.metric("TVOC", f"{latest['TVOC'].values[0]} ppb")
+col4.metric("PM 2.5", f"{latest['PM2.5'].values[0]} μg/m³")
 
-st.caption(f"Last updated (Sensor Time): {latest['Display_Time']}")
+st.caption(f"Last updated (Sensor Time): {latest['Display_Time'].values[0]}")
 st.divider()
 
 # --- GRAPHING ---
@@ -74,7 +81,6 @@ chart_data = chart_data.set_index('Sort_Time')
 numeric_cols = chart_data.select_dtypes(include='number').columns
 chart_data = chart_data[numeric_cols].resample('1min').mean().interpolate(method='time')
 
-# Plotting
 tab1, tab2, tab3 = st.tabs(["🌫️ Particles", "🌬️ Air Quality", "🌡️ Climate"])
 with tab1: st.line_chart(chart_data[['PM2.5', 'PM10', 'MQ135']])
 with tab2: st.line_chart(chart_data[['TVOC', 'eCO2']])

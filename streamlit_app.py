@@ -61,17 +61,20 @@ latest = df.iloc[0].to_frame().T
 # --- 4. RUN MODEL PREDICTION ---
 if my_model:
     # IMPORTANT: Map your sensor names to the names the model was trained on.
-    # Replace 'col_2', etc., with the exact names from your model's .feature_names_in_
+# Update this dictionary to include ALL columns the model expects
     mapping_dict = {
         'TVOC': 'col_2',
         'eCO2': 'col_3',
         'Temp': 'col_4',
         'Humidity': 'col_5',
-        'PM2.5': 'col_6'
+        'PM2.5': 'col_6',
+        'CH0': 'col_7',   # Assuming these map based on your earlier table
+        'CH3': 'col_8',
+        'MQ135': 'col_9'
     }
     
-    # Extract features, rename, and predict
-    features = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5']].rename(columns=mapping_dict)
+    # Update this selection list to match the keys above
+    features = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
     
     try:
         prediction = my_model.predict(features)[0]

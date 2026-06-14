@@ -42,13 +42,13 @@ def load_sensor_data():
             df = df.drop(columns=["Unnamed: 1"])
             
         if 'Timestamp' in df.columns:
-            # Parse dates (dayfirst=True fixes the DD/MM/YYYY confusion)
-            df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce', dayfirst=True)
+            # 1. Create a clean base timestamp
+            df['Original_Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce', dayfirst=True)
             
-            # --- TIMEZONE FIX (+7 UTC) ---
-            df['Timestamp'] = df['Timestamp'] + pd.Timedelta(hours=7)
+            # 2. Create the Localized timestamp for graphing and sorting
+            df['Timestamp'] = df['Original_Timestamp'] + pd.Timedelta(hours=7)
             
-            df = df.dropna(subset=['Timestamp'])
+            # 3. Sort by the local time
             df = df.sort_values(by='Timestamp', ascending=False)
             
         return df

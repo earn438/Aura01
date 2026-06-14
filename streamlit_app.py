@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-import joblib 
+import joblib
 import os
 
 # --- CONFIGURATION ---
-# Ensure this matches your filename on GitHub exactly
 MODEL_PATH = 'models/rf_model_unified.joblib'
 MODEL_NAME = "VapeGuard AI v1.0"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
@@ -21,7 +20,7 @@ def load_model():
             st.error(f"Error loading model: {e}")
             return None
     else:
-        st.warning(f"⚠️ Model file not found at {MODEL_PATH}. Please ensure it is uploaded.")
+        st.warning(f"⚠️ Model file not found at {MODEL_PATH}.")
         return None
 
 my_model = load_model()
@@ -61,30 +60,31 @@ latest = df.iloc[0].to_frame().T
 
 # --- 4. RUN MODEL PREDICTION ---
 if my_model:
-    # 1. Select the raw data
-    raw_data = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5']]
-    
-    # 2. Rename them to match the model's training labels
-    # NOTE: Change these keys ('col_2', etc.) to match EXACTLY what your model expects!
-    prediction_df = raw_data.rename({
+    # IMPORTANT: Map your sensor names to the names the model was trained on.
+    # Replace 'col_2', etc., with the exact names from your model's .feature_names_in_
+    mapping_dict = {
         'TVOC': 'col_2',
         'eCO2': 'col_3',
         'Temp': 'col_4',
         'Humidity': 'col_5',
         'PM2.5': 'col_6'
-    })
+    }
     
-    # 3. Transpose so the model sees it as one row, not one column
-    input_features = prediction_df.to_frame().T
+    # Extract features, rename, and predict
+    features = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5']].rename(columns=mapping_dict)
     
     try:
-        prediction = my_model.predict(input_features)[0]
+        prediction = my_model.predict(features)[0]
         if prediction == 1:
             st.error("🚨 VAPE DETECTED: AI Model indicates vape particles!")
         else:
             st.success("✅ AIR QUALITY: Clean.")
     except Exception as e:
         st.error(f"Prediction error: {e}")
+        st.write("Model expects these feature names:", my_model.feature_names_in_)
+else:
+    st.info("ℹ️ Prediction system offline.")
+
 # --- METRICS & GRAPHS ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Temp", f"{latest['Temp'].values[0]} °C")

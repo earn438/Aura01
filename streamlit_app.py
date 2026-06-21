@@ -116,13 +116,21 @@ st.subheader("Facility Sensor Network")
 
 # 1. Get Auto-Location safely
 loc = streamlit_geolocation()
-auto_lat = loc.get('latitude', 18.5847) if loc else 18.5847
-auto_lon = loc.get('longitude', 99.0256) if loc else 99.0256
+
+# Extract values safely: check if loc is a dict and has the keys
+if isinstance(loc, dict) and loc.get('latitude') is not None:
+    auto_lat = float(loc['latitude'])
+    auto_lon = float(loc['longitude'])
+else:
+    # Fallback coordinates
+    auto_lat = 18.5847
+    auto_lon = 99.0256
 
 # 2. Manual Input Setup
 col_lat, col_lon = st.columns(2)
-base_lat = col_lat.number_input("Latitude", value=float(auto_lat), format="%.4f")
-base_lon = col_lon.number_input("Longitude", value=float(auto_lon), format="%.4f")
+# Now we are 100% sure auto_lat/lon are floats
+base_lat = col_lat.number_input("Latitude", value=auto_lat, format="%.4f")
+base_lon = col_lon.number_input("Longitude", value=auto_lon, format="%.4f")
 
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 

@@ -146,40 +146,58 @@ tab1, tab2, tab3 = st.tabs(["🌫️ Particles", "🌬️ Air Quality", "🌡️
 with tab1: st.line_chart(chart_data[['PM2.5', 'PM10', 'MQ135']])
 with tab2: st.line_chart(chart_data[['TVOC', 'eCO2']])
 with tab3: st.line_chart(chart_data[['Temp', 'Humidity']])
+import pydeck as pdk
+
 # --- 6. SIMULATED SENSOR NETWORK MAP ---
 st.divider()
 st.subheader("📍 Facility Sensor Network")
 
-# Base coordinates (Simulated around a central facility)
 base_lat = 18.5847
 base_lon = 99.0256
-
-# Safely grab the live prediction state from Section 4 (default to 0 if offline)
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
-# 1. Create a simulated network of 4 sensors
 mock_sensors = pd.DataFrame({
     'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
     'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
     'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
-    
-    # We tie Sensor 1 to your ACTUAL live Google Sheet prediction, and hardcode Sensor 2 to "Vaping" for the simulation
     'vape_detected': [live_state, 1, 0, 0] 
 })
 
-# 2. Map status to Hex Colors (Red = Vape, Green = Clean)
-mock_sensors['color'] = mock_sensors['vape_detected'].map({1: '#FF4B4B', 0: '#00CC66'})
+# PyDeck strictly requires [R, G, B, Alpha] color arrays instead of Hex codes
+mock_sensors['color'] = mock_sensors['vape_detected'].map({
+    1: [255, 75, 75, 255],   # Streamlit Red
+    0: [0, 204, 102, 255]    # Streamlit Green
+})
 
 col_map, col_text = st.columns([2, 1])
 
 with col_map:
-    # Streamlit natively renders the colored dots based on the 'color' column
-    st.map(
-        mock_sensors,
-        latitude='latitude',
-        longitude='longitude',
-        color='color',
-        size=250
+    # Define the static-pixel layer
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=mock_sensors,
+        get_position=["longitude", "latitude"],
+        get_fill_color="color",
+        get_radius=12,          # The size of the dot...
+        radius_units="pixels",  # <-- THE MAGIC: Lock to screen pixels, not map meters
+        pickable=True
+    )
+
+    # Set the starting camera angle
+    view_state = pdk.ViewState(
+        latitude=base_lat,
+        longitude=base_lon,
+        zoom=16.5,
+        pitch=0
+    )
+
+    # Render it
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[layer], 
+            initial_view_state=view_state,
+            tooltip={"text": "{sensor_id}"}  # Bonus: Gives you hover-popups!
+        )
     )
 
 with col_text:

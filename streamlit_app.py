@@ -1,14 +1,16 @@
-import streamlit as st
-import pandas as pd
-import joblib
 import os
+import joblib
+import pandas as pd
+import pydeck as pdk
+import streamlit as st
 
 # --- CONFIGURATION ---
-MODEL_PATH = 'models/rf_model_unified.joblib'
+MODEL_PATH = "models/rf_model_unified.joblib"
 MODEL_NAME = "Aurafarm AI"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
 
 st.set_page_config(page_title=MODEL_NAME, page_icon="🚭", layout="wide")
+
 
 # --- 1. LOAD MODEL ---
 @st.cache_resource
@@ -23,7 +25,9 @@ def load_model():
         st.warning(f"⚠️ Model file not found at {MODEL_PATH}.")
         return None
 
+
 my_model = load_model()
+
 
 # --- 2. DATA LOADING ---
 @st.cache_data(ttl=30)
@@ -31,22 +35,33 @@ def load_sensor_data():
     try:
         df = pd.read_csv(SHEET_URL)
         column_mapping = {
-            "Unnamed: 0": "Timestamp", "tvoc": "TVOC", "eco2": "eCO2",
-            "temp": "Temp", "humidity": "Humidity", "ch0": "CH0",
-            "ch3": "CH3", "mq135": "MQ135", "2.5": "PM2.5", "10": "PM10"
+            "Unnamed: 0": "Timestamp",
+            "tvoc": "TVOC",
+            "eco2": "eCO2",
+            "temp": "Temp",
+            "humidity": "Humidity",
+            "ch0": "CH0",
+            "ch3": "CH3",
+            "mq135": "MQ135",
+            "2.5": "PM2.5",
+            "10": "PM10",
         }
         df = df.rename(columns=column_mapping)
-        if "Unnamed: 1" in df.columns: df = df.drop(columns=["Unnamed: 1"])
-            
-        if 'Timestamp' in df.columns:
-            df['Display_Time'] = pd.to_datetime(df['Timestamp'], errors='coerce', dayfirst=True)
-            df['Sort_Time'] = df['Display_Time'] + pd.Timedelta(hours=7)
-            df = df.dropna(subset=['Display_Time'])
-            df = df.sort_values(by='Sort_Time', ascending=False)
+        if "Unnamed: 1" in df.columns:
+            df = df.drop(columns=["Unnamed: 1"])
+
+        if "Timestamp" in df.columns:
+            df["Display_Time"] = pd.to_datetime(
+                df["Timestamp"], errors="coerce", dayfirst=True
+            )
+            df["Sort_Time"] = df["Display_Time"] + pd.Timedelta(hours=7)
+            df = df.dropna(subset=["Display_Time"])
+            df = df.sort_values(by="Sort_Time", ascending=False)
         return df
     except Exception as e:
         st.error(f"Failed to load data: {e}")
         return pd.DataFrame()
+
 
 df = load_sensor_data()
 
@@ -59,22 +74,24 @@ if df.empty:
 latest = df.iloc[0].to_frame().T
 
 # --- 4. RUN MODEL PREDICTION ---
+prediction = None  # Instantiated safely for downstream map reference
+
 if my_model:
-    # Update this dictionary to include ALL columns the model expects
     mapping_dict = {
-        'TVOC': 'col_2',
-        'eCO2': 'col_3',
-        'Temp': 'col_4',
-        'Humidity': 'col_5',
-        'PM2.5': 'col_6',
-        'CH0': 'col_7',   # Assuming these map based on your earlier table
-        'CH3': 'col_8',
-        'MQ135': 'col_9'
+        "TVOC": "col_2",
+        "eCO2": "col_3",
+        "Temp": "col_4",
+        "Humidity": "col_5",
+        "PM2.5": "col_6",
+        "CH0": "col_7",
+        "CH3": "col_8",
+        "MQ135": "col_9",
     }
-    
-    # Update this selection list to match the keys above
-    features = latest[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
-    
+
+    features = latest[
+        ["TVOC", "eCO2", "Temp", "Humidity", "PM2.5", "CH0", "CH3", "MQ135"]
+    ].rename(columns=mapping_dict)
+
     try:
         prediction = my_model.predict(features)[0]
         if prediction == 1:
@@ -86,43 +103,46 @@ if my_model:
         st.write("Model expects these feature names:", my_model.feature_names_in_)
 else:
     st.info("ℹ️ Prediction system offline.")
+
+
 # --- 5. VAPE DETECTION HISTORY ---
 if my_model:
     st.subheader("⚠️ Detection History")
-    
-    # Run prediction on full history
-    hist_features = df[['TVOC', 'eCO2', 'Temp', 'Humidity', 'PM2.5', 'CH0', 'CH3', 'MQ135']].rename(columns=mapping_dict)
-    df['is_vape'] = my_model.predict(hist_features)
-    
-    # Filter for only detected rows
-    vape_rows = df[df['is_vape'] == 1].copy()
-    
+
+    hist_features = df[
+        ["TVOC", "eCO2", "Temp", "Humidity", "PM2.5", "CH0", "CH3", "MQ135"]
+    ].rename(columns=mapping_dict)
+    df["is_vape"] = my_model.predict(hist_features)
+
+    vape_rows = df[df["is_vape"] == 1].copy()
+
     if not vape_rows.empty:
-        # Create blocks: A new block starts if the gap is > 5 minutes
-        vape_rows = vape_rows.sort_values('Display_Time')
-        vape_rows['block'] = (vape_rows['Display_Time'].diff() > pd.Timedelta(minutes=5)).cumsum()
-        
-        # Group and reverse to show latest detections at the top
-        grouped_vape = vape_rows.groupby('block')
+        vape_rows = vape_rows.sort_values("Display_Time")
+        vape_rows["block"] = (
+            vape_rows["Display_Time"].diff() > pd.Timedelta(minutes=5)
+        ).cumsum()
+
+        grouped_vape = vape_rows.groupby("block")
         for _, group in reversed(list(grouped_vape)):
-            start_time = group['Display_Time'].min().strftime('%H:%M')
-            end_time = group['Display_Time'].max().strftime('%H:%M')
-            date_str = group['Display_Time'].min().strftime('%Y-%m-%d')
-            
-            # If the start and end are the same (single reading), just show the time
+            start_time = group["Display_Time"].min().strftime("%H:%M")
+            end_time = group["Display_Time"].max().strftime("%H:%M")
+            date_str = group["Display_Time"].min().strftime("%Y-%m-%d")
+
             if start_time == end_time:
                 time_range = f"at {start_time}"
             else:
                 time_range = f"from {start_time} to {end_time}"
-            
+
             st.markdown(
                 f"<div style='color: #ff4b4b; font-weight: bold; padding: 10px; border-left: 5px solid #ff4b4b; background-color: #fff0f0; margin-bottom: 10px; border-radius: 4px;'>"
                 f"🚨 Vape Detected: {date_str} {time_range}"
-                f"</div>", 
-                unsafe_allow_html=True
+                f"</div>",
+                unsafe_allow_html=True,
             )
     else:
         st.info("No vape events detected in the available data.")
+
+
 # --- METRICS & GRAPHS ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Temp", f"{latest['Temp'].values[0]} °C")
@@ -134,21 +154,24 @@ st.caption(f"Last updated (Sensor Time): {latest['Display_Time'].values[0]}")
 st.divider()
 
 st.subheader("📈 Past 24 Hours Trends")
-chart_data = df.sort_values(by='Sort_Time', ascending=True)
-cutoff = chart_data['Sort_Time'].max() - pd.Timedelta(days=1)
-chart_data = chart_data[chart_data['Sort_Time'] >= cutoff]
-chart_data = chart_data.set_index('Sort_Time')
+chart_data = df.sort_values(by="Sort_Time", ascending=True)
+cutoff = chart_data["Sort_Time"].max() - pd.Timedelta(days=1)
+chart_data = chart_data[chart_data["Sort_Time"] >= cutoff]
+chart_data = chart_data.set_index("Sort_Time")
 
-numeric_cols = chart_data.select_dtypes(include='number').columns
-chart_data = chart_data[numeric_cols].resample('1min').mean().interpolate(method='time')
+numeric_cols = chart_data.select_dtypes(include="number").columns
+chart_data = (
+    chart_data[numeric_cols].resample("1min").mean().interpolate(method="time")
+)
 
 tab1, tab2, tab3 = st.tabs(["🌫️ Particles", "🌬️ Air Quality", "🌡️ Climate"])
-with tab1: st.line_chart(chart_data[['PM2.5', 'PM10', 'MQ135']])
-with tab2: st.line_chart(chart_data[['TVOC', 'eCO2']])
-with tab3: st.line_chart(chart_data[['Temp', 'Humidity']])
-import pydeck as pdk
+with tab1:
+    st.line_chart(chart_data[["PM2.5", "PM10", "MQ135"]])
+with tab2:
+    st.line_chart(chart_data[["TVOC", "eCO2"]])
+with tab3:
+    st.line_chart(chart_data[["Temp", "Humidity"]])
 
-import pydeck as pdk
 
 # --- 6. SIMULATED SENSOR NETWORK MAP ---
 st.divider()
@@ -156,37 +179,30 @@ st.subheader("📍 Facility Sensor Network")
 
 base_lat = 18.5847
 base_lon = 99.0256
-live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
+live_state = 1 if (prediction == 1) else 0
 
-# Grab the live stats from your actual Google Sheet for Sensor 1
-live_temp = latest['Temp'].values[0]
-live_hum = latest['Humidity'].values[0]
-live_tvoc = latest['TVOC'].values[0]
-live_pm = latest['PM2.5'].values[0]
+mock_sensors = pd.DataFrame(
+    {
+        "sensor_id": [
+            "SN-01 (Main Lobby)",
+            "SN-02 (East Restroom)",
+            "SN-03 (Breakroom)",
+            "SN-04 (Stairwell B)",
+        ],
+        "latitude": [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
+        "longitude": [
+            base_lon,
+            base_lon - 0.0006,
+            base_lon - 0.0002,
+            base_lon + 0.0005,
+        ],
+        "vape_detected": [live_state, 1, 0, 0],
+    }
+)
 
-mock_sensors = pd.DataFrame({
-    'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
-    'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
-    'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
-    'vape_detected': [live_state, 1, 0, 0],
-    
-    # --- SIMULATED TELEMETRY DATA ---
-    'temp': [live_temp, 25.1, 22.4, 21.8],
-    'humidity': [live_hum, 68.5, 51.0, 54.2],
-    'tvoc': [live_tvoc, 1840, 110, 85],    # <-- SN-02 gets a huge simulated TVOC spike
-    'pm25': [live_pm, 215.5, 12.3, 9.1],   # <-- SN-02 gets a huge simulated PM2.5 spike
-    'status_label': [
-        "🚨 VAPE DETECTED" if live_state == 1 else "✅ NORMAL",
-        "🚨 VAPE DETECTED",
-        "✅ NORMAL",
-        "✅ NORMAL"
-    ]
-})
-
-mock_sensors['color'] = mock_sensors['vape_detected'].map({
-    1: [255, 75, 75, 255], 
-    0: [0, 204, 102, 255]
-})
+mock_sensors["color"] = mock_sensors["vape_detected"].map(
+    {1: [255, 75, 75, 255], 0: [0, 204, 102, 255]}
+)
 
 col_map, col_text = st.columns([2, 1])
 
@@ -196,47 +212,6 @@ with col_map:
         data=mock_sensors,
         get_position=["longitude", "latitude"],
         get_fill_color="color",
-        get_radius=12,          
-        radius_units="pixels",  
-        pickable=True
-    )
-
-    view_state = pdk.ViewState(
-        latitude=base_lat,
-        longitude=base_lon,
-        zoom=16.5,
-        pitch=0
-    )
-
-    # --- THE RICH HTML TOOLTIP ---
-    map_tooltip = {
-        "html": """
-        <div style='font-family: sans-serif; padding: 2px;'>
-            <b style='font-size: 13px;'>{sensor_id}</b><br/>
-            <span style='font-size: 11px; color: #888;'>Status:</span> <b>{status_label}</b>
-            <hr style='margin: 6px 0; border: none; border-top: 1px solid rgba(255,255,255,0.2);' />
-            <table style='width:100%; font-size:11px;'>
-                <tr><td>🌡️ Temp:</td><td style='text-align:right'><b>{temp} °C</b></td></tr>
-                <tr><td>💧 Hum:</td><td style='text-align:right'><b>{humidity} %</b></td></tr>
-                <tr><td>🧪 TVOC:</td><td style='text-align:right'><b>{tvoc} ppb</b></td></tr>
-                <tr><td>🌫️ PM2.5:</td><td style='text-align:right'><b>{pm25} μg/m³</b></td></tr>
-            </table>
-        </div>
-        """
-    }
-
-    st.pydeck_chart(
-        pdk.Deck(
-            layers=[layer], 
-            initial_view_state=view_state,
-            tooltip=map_tooltip
-        )
-    )
-
-with col_text:
-    st.write("### Live Node Status")
-    for _, row in mock_sensors.iterrows():
-        if row['vape_detected'] == 1:
-            st.markdown(f"🔴 **{row['sensor_id']}** \n<small style='color:#ff4b4b;'>🚨 Vape Particles Detected</small>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"🟢 **{row['sensor_id']}** \n<small style='color:#00cc66;'>✅ Air Clean</small>", unsafe_allow_html=True)
+        get_radius=12,
+        radius_units="pixels",
+        pickable=True,

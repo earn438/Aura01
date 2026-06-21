@@ -13,12 +13,16 @@ BASE_LON = 99.0256
 
 st.set_page_config(page_title=MODEL_NAME, layout="wide")
 
-# Custom background color (e.g., a light soft blue/grey)
+# Custom Dark Theme
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #f0f2f6;
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+    }
+    h1, h2, h3 {
+        color: #ffffff;
     }
     </style>
     """,
@@ -111,7 +115,7 @@ if my_model:
             end_time = group["Display_Time"].max().strftime("%H:%M")
             date_str = group["Display_Time"].min().strftime("%Y-%m-%d")
             time_range = f"at {start_time}" if start_time == end_time else f"from {start_time} to {end_time}"
-            st.markdown(f"<div style='color: #ff4b4b; font-weight: bold; padding: 10px; border-left: 5px solid #ff4b4b; background-color: #fff0f0; margin-bottom: 10px; border-radius: 4px;'>Vape Detected: {date_str} {time_range}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color: #ff4b4b; font-weight: bold; padding: 10px; border-left: 5px solid #ff4b4b; background-color: #2d2d2d; margin-bottom: 10px; border-radius: 4px;'>Vape Detected: {date_str} {time_range}</div>", unsafe_allow_html=True)
     else:
         st.info("No vape events detected in the available data.")
 
@@ -124,7 +128,24 @@ col4.metric("PM 2.5", f"{latest['PM2.5'].values[0]} μg/m³")
 st.caption(f"Last updated (Sensor Time): {latest['Display_Time'].values[0]}")
 st.divider()
 
+st.subheader("Past 24 Hours Trends")
+chart_data = df.sort_values(by="Sort_Time", ascending=True)
+cutoff = chart_data["Sort_Time"].max() - pd.Timedelta(days=1)
+chart_data = chart_data[chart_data["Sort_Time"] >= cutoff]
+chart_data = chart_data.set_index("Sort_Time")
+numeric_cols = chart_data.select_dtypes(include="number").columns
+chart_data = (chart_data[numeric_cols].resample("1min").mean().interpolate(method="time"))
+
+tab1, tab2, tab3 = st.tabs(["Particles", "Air Quality", "Climate"])
+with tab1:
+    st.line_chart(chart_data[["PM2.5", "PM10", "MQ135"]])
+with tab2:
+    st.line_chart(chart_data[["TVOC", "eCO2"]])
+with tab3:
+    st.line_chart(chart_data[["Temp", "Humidity"]])
+
 # --- 6. SIMULATED SENSOR NETWORK MAP ---
+st.divider()
 st.subheader("Facility Sensor Network")
 
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
@@ -144,11 +165,11 @@ col_map, col_text = st.columns([2, 1])
 with col_map:
     layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=6, radius_units="meters", radius_min_pixels=5, radius_max_pixels=16, pickable=True)
     view_state = pdk.ViewState(latitude=BASE_LAT, longitude=BASE_LON, zoom=16.5, pitch=0)
-    # Using satellite imagery via map_style='satellite'
+    # Using dark satellite style for contrast
     st.pydeck_chart(pdk.Deck(
         layers=[layer], 
         initial_view_state=view_state, 
-        map_style='mapbox://styles/mapbox/satellite-v9', 
+        map_style='mapbox://styles/mapbox/dark-v11', 
         tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"}
     ))
 

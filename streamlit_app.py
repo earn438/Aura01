@@ -215,3 +215,28 @@ with col_map:
         get_radius=12,
         radius_units="pixels",
         pickable=True,
+    )
+
+    view_state = pdk.ViewState(
+        latitude=base_lat, longitude=base_lon, zoom=16.5, pitch=0
+    )
+
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[layer], initial_view_state=view_state, tooltip={"text": "{sensor_id}"}
+        )
+    )
+
+with col_text:
+    st.write("### Live Node Status")
+    for _, row in mock_sensors.iterrows():
+        if row["vape_detected"] == 1:
+            st.markdown(
+                f"🔴 **{row['sensor_id']}** \n<small style='color:#ff4b4b;'>🚨 Vape Particles Detected</small>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f"🟢 **{row['sensor_id']}** \n<small style='color:#00cc66;'>✅ Air Clean</small>",
+                unsafe_allow_html=True,
+            )

@@ -9,6 +9,10 @@ MODEL_PATH = "models/rf_model_unified.joblib"
 MODEL_NAME = "Aurafarm AI"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
 
+# Fixed coordinates for the facility
+BASE_LAT = 18.5847
+BASE_LON = 99.0256
+
 st.set_page_config(page_title=MODEL_NAME, layout="wide")
 
 # --- 1. LOAD MODEL ---
@@ -130,16 +134,12 @@ with tab3:
 st.divider()
 st.subheader("Facility Sensor Network")
 
-col_lat, col_lon = st.columns(2)
-base_lat = col_lat.number_input("Latitude", value=18.5847, format="%.4f")
-base_lon = col_lon.number_input("Longitude", value=99.0256, format="%.4f")
-
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
 mock_sensors = pd.DataFrame({
     'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
-    'latitude': [base_lat + 0.0004, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
-    'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
+    'latitude': [BASE_LAT + 0.0004, BASE_LAT + 0.0004, BASE_LAT - 0.0005, BASE_LAT + 0.0002],
+    'longitude': [BASE_LON, BASE_LON - 0.0006, BASE_LON - 0.0002, BASE_LON + 0.0005],
     'vape_detected': [live_state, 1, 0, 0],
     'air_quality': ['Good', 'Poor (Vape)', 'Good', 'Good']
 })
@@ -150,7 +150,7 @@ col_map, col_text = st.columns([2, 1])
 
 with col_map:
     layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=6, radius_units="meters", radius_min_pixels=5, radius_max_pixels=16, pickable=True)
-    view_state = pdk.ViewState(latitude=base_lat, longitude=base_lon, zoom=16.5, pitch=0)
+    view_state = pdk.ViewState(latitude=BASE_LAT, longitude=BASE_LON, zoom=16.5, pitch=0)
     st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"}))
 
 with col_text:

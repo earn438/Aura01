@@ -179,58 +179,33 @@ st.subheader("📍 Facility Sensor Network")
 
 base_lat = 18.5847
 base_lon = 99.0256
-live_state = 1 if (prediction == 1) else 0
+live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
-mock_sensors = pd.DataFrame(
-    {
-        "sensor_id": [
-            "SN-01 (Main Lobby)",
-            "SN-02 (East Restroom)",
-            "SN-03 (Breakroom)",
-            "SN-04 (Stairwell B)",
-        ],
-        "latitude": [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
-        "longitude": [
-            base_lon,
-            base_lon - 0.0006,
-            base_lon - 0.0002,
-            base_lon + 0.0005,
-        ],
-        "vape_detected": [live_state, 1, 0, 0],
-    }
-)
+mock_sensors = pd.DataFrame({
+    'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
+    'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
+    'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
+    'vape_detected': [live_state, 1, 0, 0] 
+})
 
-mock_sensors["color"] = mock_sensors["vape_detected"].map(
-    {1: [255, 75, 75, 255], 0: [0, 204, 102, 255]}
-)
+mock_sensors["color"] = mock_sensors["vape_detected"].map({1: [255, 75, 75, 255], 0: [0, 204, 102, 255]})
 
 col_map, col_text = st.columns([2, 1])
 
 with col_map:
+    # 1. Bake the layer
     layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=4, radius_units="meters", radius_min_pixels=3, radius_max_pixels=14, pickable=True)
+    
+    # 2. Set the camera
     view_state = pdk.ViewState(latitude=base_lat, longitude=base_lon, zoom=16.5, pitch=0)
+    
+    # 3. Put the baked layer inside the box
     st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{sensor_id}"}))
-
-    view_state = pdk.ViewState(
-        latitude=base_lat, longitude=base_lon, zoom=16.5, pitch=0
-    )
-
-    st.pydeck_chart(
-        pdk.Deck(
-            layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=4, radius_units="meters", radius_min_pixels=3, radius_max_pixels=14, pickable=True)
-        )
-    )
 
 with col_text:
     st.write("### Live Node Status")
     for _, row in mock_sensors.iterrows():
-        if row["vape_detected"] == 1:
-            st.markdown(
-                f"🔴 **{row['sensor_id']}** \n<small style='color:#ff4b4b;'>🚨 Vape Particles Detected</small>",
-                unsafe_allow_html=True,
-            )
+        if row['vape_detected'] == 1:
+            st.markdown(f"🔴 **{row['sensor_id']}** \n<small style='color:#ff4b4b;'>🚨 Vape Particles Detected</small>", unsafe_allow_html=True)
         else:
-            st.markdown(
-                f"🟢 **{row['sensor_id']}** \n<small style='color:#00cc66;'>✅ Air Clean</small>",
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"🟢 **{row['sensor_id']}** \n<small style='color:#00cc66;'>✅ Air Clean</small>", unsafe_allow_html=True)

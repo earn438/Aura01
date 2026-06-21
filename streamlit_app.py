@@ -148,6 +148,8 @@ with tab2: st.line_chart(chart_data[['TVOC', 'eCO2']])
 with tab3: st.line_chart(chart_data[['Temp', 'Humidity']])
 import pydeck as pdk
 
+import pydeck as pdk
+
 # --- 6. SIMULATED SENSOR NETWORK MAP ---
 st.divider()
 st.subheader("📍 Facility Sensor Network")
@@ -156,38 +158,49 @@ base_lat = 18.5847
 base_lon = 99.0256
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
+# Grab the live stats from your actual Google Sheet for Sensor 1
+live_temp = latest['Temp'].values[0]
+live_hum = latest['Humidity'].values[0]
+live_tvoc = latest['TVOC'].values[0]
+live_pm = latest['PM2.5'].values[0]
+
 mock_sensors = pd.DataFrame({
     'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
     'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
     'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
-    'vape_detected': [live_state, 1, 0, 0] 
+    'vape_detected': [live_state, 1, 0, 0],
+    
+    # --- SIMULATED TELEMETRY DATA ---
+    'temp': [live_temp, 25.1, 22.4, 21.8],
+    'humidity': [live_hum, 68.5, 51.0, 54.2],
+    'tvoc': [live_tvoc, 1840, 110, 85],    # <-- SN-02 gets a huge simulated TVOC spike
+    'pm25': [live_pm, 215.5, 12.3, 9.1],   # <-- SN-02 gets a huge simulated PM2.5 spike
+    'status_label': [
+        "🚨 VAPE DETECTED" if live_state == 1 else "✅ NORMAL",
+        "🚨 VAPE DETECTED",
+        "✅ NORMAL",
+        "✅ NORMAL"
+    ]
 })
 
-# PyDeck strictly requires [R, G, B, Alpha] color arrays instead of Hex codes
 mock_sensors['color'] = mock_sensors['vape_detected'].map({
-    1: [255, 75, 75, 255],   # Streamlit Red
-    0: [0, 204, 102, 255]    # Streamlit Green
+    1: [255, 75, 75, 255], 
+    0: [0, 204, 102, 255]
 })
 
 col_map, col_text = st.columns([2, 1])
 
 with col_map:
-    # Define the static-pixel layer
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=mock_sensors,
         get_position=["longitude", "latitude"],
         get_fill_color="color",
-        
-        # --- THE CLAMPED SIZING STRATEGY ---
-        get_radius=25,         # Base size: 25 real-world meters
-        radius_min_pixels=3,   # Zoomed way out? Shrink down to a tiny 3px laser speck.
-        radius_max_pixels=10,  # Zoomed way in? Cap out at a polite 10px dot.
-        
+        get_radius=12,          
+        radius_units="pixels",  
         pickable=True
     )
 
-    # Set the starting camera angle
     view_state = pdk.ViewState(
         latitude=base_lat,
         longitude=base_lon,
@@ -195,12 +208,28 @@ with col_map:
         pitch=0
     )
 
-    # Render it
+    # --- THE RICH HTML TOOLTIP ---
+    map_tooltip = {
+        "html": """
+        <div style='font-family: sans-serif; padding: 2px;'>
+            <b style='font-size: 13px;'>{sensor_id}</b><br/>
+            <span style='font-size: 11px; color: #888;'>Status:</span> <b>{status_label}</b>
+            <hr style='margin: 6px 0; border: none; border-top: 1px solid rgba(255,255,255,0.2);' />
+            <table style='width:100%; font-size:11px;'>
+                <tr><td>🌡️ Temp:</td><td style='text-align:right'><b>{temp} °C</b></td></tr>
+                <tr><td>💧 Hum:</td><td style='text-align:right'><b>{humidity} %</b></td></tr>
+                <tr><td>🧪 TVOC:</td><td style='text-align:right'><b>{tvoc} ppb</b></td></tr>
+                <tr><td>🌫️ PM2.5:</td><td style='text-align:right'><b>{pm25} μg/m³</b></td></tr>
+            </table>
+        </div>
+        """
+    }
+
     st.pydeck_chart(
         pdk.Deck(
             layers=[layer], 
             initial_view_state=view_state,
-            tooltip={"text": "{sensor_id}"}  # Bonus: Gives you hover-popups!
+            tooltip=map_tooltip
         )
     )
 

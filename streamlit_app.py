@@ -146,3 +146,46 @@ tab1, tab2, tab3 = st.tabs(["🌫️ Particles", "🌬️ Air Quality", "🌡️
 with tab1: st.line_chart(chart_data[['PM2.5', 'PM10', 'MQ135']])
 with tab2: st.line_chart(chart_data[['TVOC', 'eCO2']])
 with tab3: st.line_chart(chart_data[['Temp', 'Humidity']])
+# --- 6. SIMULATED SENSOR NETWORK MAP ---
+st.divider()
+st.subheader("📍 Facility Sensor Network")
+
+# Base coordinates (Simulated around a central facility)
+base_lat = 18.5847
+base_lon = 99.0256
+
+# Safely grab the live prediction state from Section 4 (default to 0 if offline)
+live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
+
+# 1. Create a simulated network of 4 sensors
+mock_sensors = pd.DataFrame({
+    'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
+    'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
+    'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
+    
+    # We tie Sensor 1 to your ACTUAL live Google Sheet prediction, and hardcode Sensor 2 to "Vaping" for the simulation
+    'vape_detected': [live_state, 1, 0, 0] 
+})
+
+# 2. Map status to Hex Colors (Red = Vape, Green = Clean)
+mock_sensors['color'] = mock_sensors['vape_detected'].map({1: '#FF4B4B', 0: '#00CC66'})
+
+col_map, col_text = st.columns([2, 1])
+
+with col_map:
+    # Streamlit natively renders the colored dots based on the 'color' column
+    st.map(
+        mock_sensors,
+        latitude='latitude',
+        longitude='longitude',
+        color='color',
+        size=250
+    )
+
+with col_text:
+    st.write("### Live Node Status")
+    for _, row in mock_sensors.iterrows():
+        if row['vape_detected'] == 1:
+            st.markdown(f"🔴 **{row['sensor_id']}** \n<small style='color:#ff4b4b;'>🚨 Vape Particles Detected</small>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"🟢 **{row['sensor_id']}** \n<small style='color:#00cc66;'>✅ Air Clean</small>", unsafe_allow_html=True)

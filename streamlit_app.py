@@ -114,49 +114,36 @@ st.divider()
 st.divider()
 st.subheader("Facility Sensor Network")
 
-# 1. Get Auto-Location safely
-loc = streamlit_geolocation()
-
-# Extract values safely: check if loc is a dict and has the keys
-if isinstance(loc, dict) and loc.get('latitude') is not None:
-    auto_lat = float(loc['latitude'])
-    auto_lon = float(loc['longitude'])
-else:
-    # Fallback coordinates
-    auto_lat = 18.5847
-    auto_lon = 99.0256
-
-# 2. Manual Input Setup
+# 1. Manual Input Setup (No automatic tracking)
 col_lat, col_lon = st.columns(2)
-# Now we are 100% sure auto_lat/lon are floats
-base_lat = col_lat.number_input("Latitude", value=auto_lat, format="%.4f")
-base_lon = col_lon.number_input("Longitude", value=auto_lon, format="%.4f")
+base_lat = col_lat.number_input("Latitude", value=18.5847, format="%.4f")
+base_lon = col_lon.number_input("Longitude", value=99.0256, format="%.4f")
 
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
-# 3. Build DataFrame
+# 2. Build DataFrame
 mock_sensors = pd.DataFrame({
     'sensor_id': ['Facility Center', 'SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
     'latitude': [
-        float(base_lat), float(base_lat) + 0.0004, float(base_lat) + 0.0004, 
-        float(base_lat) - 0.0005, float(base_lat) + 0.0002
+        base_lat, base_lat + 0.0004, base_lat + 0.0004, 
+        base_lat - 0.0005, base_lat + 0.0002
     ],
     'longitude': [
-        float(base_lon), float(base_lon), float(base_lon) - 0.0006, 
-        float(base_lon) - 0.0002, float(base_lon) + 0.0005
+        base_lon, base_lon, base_lon - 0.0006, 
+        base_lon - 0.0002, base_lon + 0.0005
     ],
     'vape_detected': [0, live_state, 1, 0, 0],
-    'air_quality': ['Your Location', 'Good', 'Poor (Vape)', 'Good', 'Good']
+    'air_quality': ['Facility Center', 'Good', 'Poor (Vape)', 'Good', 'Good']
 })
 
-# 4. Define Colors
+# 3. Define Colors
 def get_color(row):
     if row['sensor_id'] == 'Facility Center': return [0, 100, 255, 255] # Blue
     return [255, 75, 75, 255] if row['vape_detected'] == 1 else [0, 204, 102, 255] # Red/Green
 
 mock_sensors["color"] = mock_sensors.apply(get_color, axis=1)
 
-# 5. Render Map
+# 4. Render Map
 col_map, col_text = st.columns([2, 1])
 
 with col_map:
@@ -165,7 +152,7 @@ with col_map:
         get_fill_color="color", get_radius=6, radius_units="meters", 
         radius_min_pixels=5, radius_max_pixels=16, pickable=True
     )
-    view_state = pdk.ViewState(latitude=float(base_lat), longitude=float(base_lon), zoom=16.5, pitch=0)
+    view_state = pdk.ViewState(latitude=base_lat, longitude=base_lon, zoom=16.5, pitch=0)
     st.pydeck_chart(pdk.Deck(
         layers=[layer], initial_view_state=view_state, 
         tooltip={"text": "Location: {sensor_id}\nStatus: {air_quality}"}

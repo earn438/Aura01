@@ -223,7 +223,7 @@ with col_map:
 
     st.pydeck_chart(
         pdk.Deck(
-            layers=[layer], initial_view_state=view_state, tooltip={"text": "{sensor_id}"}
+            layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=4, radius_units="meters", radius_min_pixels=3, radius_max_pixels=14, pickable=True)
         )
     )
 

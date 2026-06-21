@@ -181,15 +181,21 @@ base_lat = 18.5847
 base_lon = 99.0256
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
+# Added "Facility Center" as a new row
 mock_sensors = pd.DataFrame({
-    'sensor_id': ['SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
-    'latitude': [base_lat, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
-    'longitude': [base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
-    'vape_detected': [live_state, 1, 0, 0],
-    'air_quality': ['Good', 'Poor (Vape)', 'Good', 'Good']
+    'sensor_id': ['Facility Center', 'SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
+    'latitude': [base_lat, base_lat + 0.0004, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
+    'longitude': [base_lon, base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
+    'vape_detected': [0, live_state, 1, 0, 0],
+    'air_quality': ['Center Point', 'Good', 'Poor (Vape)', 'Good', 'Good']
 })
 
-mock_sensors["color"] = mock_sensors["vape_detected"].map({1: [255, 75, 75, 255], 0: [0, 204, 102, 255]})
+# Blue for center [0, 100, 255], Red for vape [255, 75, 75], Green for clean [0, 204, 102]
+def get_color(row):
+    if row['sensor_id'] == 'Facility Center': return [0, 100, 255, 255]
+    return [255, 75, 75, 255] if row['vape_detected'] == 1 else [0, 204, 102, 255]
+
+mock_sensors["color"] = mock_sensors.apply(get_color, axis=1)
 
 col_map, col_text = st.columns([2, 1])
 
@@ -199,10 +205,10 @@ with col_map:
         data=mock_sensors, 
         get_position=["longitude", "latitude"], 
         get_fill_color="color", 
-        get_radius=4, 
+        get_radius=6, # Slightly larger for the center marker
         radius_units="meters", 
-        radius_min_pixels=3, 
-        radius_max_pixels=14, 
+        radius_min_pixels=5, 
+        radius_max_pixels=16, 
         pickable=True
     )
     
@@ -211,11 +217,14 @@ with col_map:
     st.pydeck_chart(pdk.Deck(
         layers=[layer], 
         initial_view_state=view_state, 
-        tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"}
+        tooltip={"text": "Location: {sensor_id}\nStatus: {air_quality}"}
     ))
 
 with col_text:
     st.write("### Live Node Status")
     for _, row in mock_sensors.iterrows():
-        status_color = "#ff4b4b" if row['vape_detected'] == 1 else "#00cc66"
-        st.markdown(f"**{row['sensor_id']}** \n<small style='color:{status_color};'>● {row['air_quality']}</small>", unsafe_allow_html=True)
+        # Logic for sidebar text colors
+        if row['sensor_id'] == 'Facility Center': color = "#0064ff"
+        else: color = "#ff4b4b" if row['vape_detected'] == 1 else "#00cc66"
+        
+        st.markdown(f"**{row['sensor_id']}** \n<small style='color:{color};'>● {row['air_quality']}</small>", unsafe_allow_html=True)

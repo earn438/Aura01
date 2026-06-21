@@ -177,18 +177,22 @@ with tab3:
 st.divider()
 st.subheader("Facility Sensor Network")
 
-base_lat = 18.5847
-base_lon = 99.0256
+# Added location inputs so you can set your position
+col_lat, col_lon = st.columns(2)
+base_lat = col_lat.number_input("Latitude", value=18.5847, format="%.4f")
+base_lon = col_lon.number_input("Longitude", value=99.0256, format="%.4f")
+
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
 
-# Added "Facility Center" as a new row
+# The DataFrame now uses your inputs as the "Facility Center"
 mock_sensors = pd.DataFrame({
     'sensor_id': ['Facility Center', 'SN-01 (Main Lobby)', 'SN-02 (East Restroom)', 'SN-03 (Breakroom)', 'SN-04 (Stairwell B)'],
     'latitude': [base_lat, base_lat + 0.0004, base_lat + 0.0004, base_lat - 0.0005, base_lat + 0.0002],
     'longitude': [base_lon, base_lon, base_lon - 0.0006, base_lon - 0.0002, base_lon + 0.0005],
     'vape_detected': [0, live_state, 1, 0, 0],
-    'air_quality': ['Center Point', 'Good', 'Poor (Vape)', 'Good', 'Good']
+    'air_quality': ['Your Location', 'Good', 'Poor (Vape)', 'Good', 'Good']
 })
+# ... (rest of your existing code continues here)
 
 # Blue for center [0, 100, 255], Red for vape [255, 75, 75], Green for clean [0, 204, 102]
 def get_color(row):

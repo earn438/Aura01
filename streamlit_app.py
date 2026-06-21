@@ -5,15 +5,25 @@ import pydeck as pdk
 import streamlit as st
 
 # --- CONFIGURATION ---
-MODEL_PATH = "models/rf_model_new.joblib"
+MODEL_PATH = "models/rf_model_unified.joblib"
 MODEL_NAME = "Aurafarm AI"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT8Oho84O3uIYEEYE2iNub7I5Ktv4mTUteMkdBR4NpBTlJZS0tY2VFXmqM-_XlGIgSaeUIR7VjpnWSZ/pub?output=csv"
-
-# Fixed coordinates for the facility
 BASE_LAT = 18.5847
 BASE_LON = 99.0256
 
 st.set_page_config(page_title=MODEL_NAME, layout="wide")
+
+# Custom background color (e.g., a light soft blue/grey)
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #f0f2f6;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- 1. LOAD MODEL ---
 @st.cache_resource
@@ -114,24 +124,7 @@ col4.metric("PM 2.5", f"{latest['PM2.5'].values[0]} μg/m³")
 st.caption(f"Last updated (Sensor Time): {latest['Display_Time'].values[0]}")
 st.divider()
 
-st.subheader("Past 24 Hours Trends")
-chart_data = df.sort_values(by="Sort_Time", ascending=True)
-cutoff = chart_data["Sort_Time"].max() - pd.Timedelta(days=1)
-chart_data = chart_data[chart_data["Sort_Time"] >= cutoff]
-chart_data = chart_data.set_index("Sort_Time")
-numeric_cols = chart_data.select_dtypes(include="number").columns
-chart_data = (chart_data[numeric_cols].resample("1min").mean().interpolate(method="time"))
-
-tab1, tab2, tab3 = st.tabs(["Particles", "Air Quality", "Climate"])
-with tab1:
-    st.line_chart(chart_data[["PM2.5", "PM10", "MQ135"]])
-with tab2:
-    st.line_chart(chart_data[["TVOC", "eCO2"]])
-with tab3:
-    st.line_chart(chart_data[["Temp", "Humidity"]])
-
 # --- 6. SIMULATED SENSOR NETWORK MAP ---
-st.divider()
 st.subheader("Facility Sensor Network")
 
 live_state = 1 if ('prediction' in locals() and prediction == 1) else 0
@@ -151,7 +144,13 @@ col_map, col_text = st.columns([2, 1])
 with col_map:
     layer = pdk.Layer("ScatterplotLayer", data=mock_sensors, get_position=["longitude", "latitude"], get_fill_color="color", get_radius=6, radius_units="meters", radius_min_pixels=5, radius_max_pixels=16, pickable=True)
     view_state = pdk.ViewState(latitude=BASE_LAT, longitude=BASE_LON, zoom=16.5, pitch=0)
-    st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"}))
+    # Using satellite imagery via map_style='satellite'
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer], 
+        initial_view_state=view_state, 
+        map_style='mapbox://styles/mapbox/satellite-v9', 
+        tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"}
+    ))
 
 with col_text:
     st.write("### Live Node Status")

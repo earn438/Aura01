@@ -3,7 +3,6 @@ import joblib
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
 # ─────────────────────────────────────────────
 # CONFIGURATION
@@ -126,9 +125,12 @@ st.markdown(
 )
 
 # ─────────────────────────────────────────────
-# AUTO-REFRESH
+# AUTO-REFRESH  (no extra package needed)
 # ─────────────────────────────────────────────
-st_autorefresh(interval=REFRESH_MS, silent=True)
+st.markdown(
+    f'<meta http-equiv="refresh" content="{REFRESH_MS // 1000}">',
+    unsafe_allow_html=True,
+)
 
 # ─────────────────────────────────────────────
 # LOAD MODEL

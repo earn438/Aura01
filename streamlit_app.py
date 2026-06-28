@@ -88,11 +88,13 @@ st.markdown(
     .status-pill {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 10px 18px;
+        justify-content: center;
+        gap: 10px;
+        padding: 16px 48px;
+        min-width: 320px;
         border-radius: 999px;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 1.15rem;
         white-space: nowrap;
     }
     .status-vape    { background: rgba(248,81,73,0.12);  border: 1px solid #f85149; color: #ff8782; }
@@ -209,38 +211,35 @@ if my_model:
 # HERO / HEADER CARD  (title + live status pill)
 # ─────────────────────────────────────────────
 with st.container(border=True):
-    h_left, h_right = st.columns([3, 2], vertical_alignment="center")
+    st.markdown(
+        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2'>🌿 Vapo noWay</div>"
+        "<div style='text-align:center;color:#8b949e;font-size:0.95rem;margin-top:2px;margin-bottom:18px'>"
+        "Facility Air Quality Monitor</div>",
+        unsafe_allow_html=True,
+    )
 
-    with h_left:
+    if prediction is None:
         st.markdown(
-            "<div style='font-size:1.7rem;font-weight:800;line-height:1.2'>🌿 Vapo noWay</div>"
-            "<div style='color:#8b949e;font-size:0.95rem;margin-top:2px'>Facility Air Quality Monitor</div>",
+            "<div style='text-align:center'><span class='status-pill status-offline'>"
+            "⚠️ Detection Offline</span></div>",
             unsafe_allow_html=True,
         )
-
-    with h_right:
-        if prediction is None:
-            st.markdown(
-                "<div style='text-align:right'><span class='status-pill status-offline'>"
-                "⚠️ Detection Offline</span></div>",
-                unsafe_allow_html=True,
-            )
-        elif prediction == 1:
-            conf_str = f" · {confidence:.0f}%" if confidence else ""
-            st.markdown(
-                f"<div style='text-align:right'><span class='status-pill status-vape'>"
-                f"🚨 Vape Detected{conf_str}</span><br>"
-                f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
-                unsafe_allow_html=True,
-            )
-        else:
-            conf_str = f" · {confidence:.0f}%" if confidence else ""
-            st.markdown(
-                f"<div style='text-align:right'><span class='status-pill status-clean'>"
-                f"✅ Air Quality Clean{conf_str}</span><br>"
-                f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
-                unsafe_allow_html=True,
-            )
+    elif prediction == 1:
+        conf_str = f" · {confidence:.0f}%" if confidence else ""
+        st.markdown(
+            f"<div style='text-align:center'><span class='status-pill status-vape'>"
+            f"🚨 Vape Detected{conf_str}</span><br>"
+            f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        conf_str = f" · {confidence:.0f}%" if confidence else ""
+        st.markdown(
+            f"<div style='text-align:center'><span class='status-pill status-clean'>"
+            f"✅ Air Quality Clean{conf_str}</span><br>"
+            f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
+            unsafe_allow_html=True,
+        )
 
 # ─────────────────────────────────────────────
 # METRIC CARDS  (with deltas vs previous reading)

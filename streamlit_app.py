@@ -33,7 +33,7 @@ COLUMN_RENAME  = {
 # ─────────────────────────────────────────────
 # PAGE CONFIG & GLOBAL CSS
 # ─────────────────────────────────────────────
-st.set_page_config(page_title=MODEL_NAME, page_icon="🌿", layout="wide")
+st.set_page_config(page_title=MODEL_NAME, layout="wide")
 
 st.markdown(
     """
@@ -228,7 +228,7 @@ with st.container(border=True):
         conf_str = f" · {confidence:.0f}%" if confidence else ""
         st.markdown(
             f"<div style='text-align:center'><span class='status-pill status-vape'>"
-            f"🚨 Vape Detected{conf_str}</span><br>"
+            f"Vape Detected{conf_str}</span><br>"
             f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
             unsafe_allow_html=True,
         )

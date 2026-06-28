@@ -16,8 +16,8 @@ SHEET_URL   = (
 )
 BASE_LAT    = 18.5847
 BASE_LON    = 99.0256
-REFRESH_MS  = 30_000   # auto-refresh every 30 seconds
-HOURS_BACK  = 24        # fixed trend-chart window
+REFRESH_MS  = 30_000
+HOURS_BACK  = 24
 
 FEATURE_COLS   = ["TVOC", "eCO2", "Temp", "Humidity", "PM2.5", "CH0", "CH3", "MQ135"]
 MAPPING_DICT   = {
@@ -31,115 +31,144 @@ COLUMN_RENAME  = {
 }
 
 # ─────────────────────────────────────────────
-# PAGE CONFIG & GLOBAL CSS  (White / Light Mode)
+# PAGE CONFIG & DARK THEME CSS
 # ─────────────────────────────────────────────
-st.set_page_config(page_title=MODEL_NAME, layout="wide")
+st.set_page_config(page_title="Aurafarm", layout="wide")
 
 st.markdown(
     """
     <style>
-    /* ── Base canvas ── */
-    [data-testid="stAppViewContainer"] { background: #fffff7; color: #1a1f29; }
-    [data-testid="stHeader"]           { background: transparent; }
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1280px; }
-
-    /* ── Typography ── */
-    h1, h2, h3, h4, .big-title {
-        font-family: 'Inter', 'Segoe UI', sans-serif;
-        letter-spacing: -0.3px;
-        color: #1a1f29;
+    /* ── Dark canvas ── */
+    html, body, [data-testid="stAppViewContainer"] {
+        background: #0d1117 !important;
+        color: #c9d1d9;
     }
+    [data-testid="stHeader"]  { background: transparent !important; }
+    [data-testid="stSidebar"] { background: #161b22 !important; }
+    .block-container { padding-top: 1.8rem; padding-bottom: 2rem; max-width: 98% !important; padding-left: 2rem !important; padding-right: 2rem !important; }
+
+    /* ── Typography — Inter / Segoe UI (original) ── */
+    * { font-family: 'Inter', 'Segoe UI', sans-serif; }
+    h1, h2, h3, h4 { color: #e6edf3; letter-spacing: -0.3px; }
+
+    /* ── Eyebrow label ── */
     .eyebrow {
         font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 1.3px;
         text-transform: uppercase;
-        color: #6b7280;
-        margin-bottom: 10px;
+        color: #6e7681;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
     }
     .eyebrow::before {
         content: "●";
-        color: #16a34a;
-        margin-right: 6px;
-        font-size: 0.6rem;
+        color: #3fb950;
+        font-size: 0.55rem;
     }
 
-    /* ── Card containers (every bordered st.container) ── */
+    /* ── Card containers ── */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: #ffffff !important;
-        border: 1px solid #e5e7eb !important;
+        background: #161b22 !important;
+        border: 1px solid #30363d !important;
         border-radius: 16px !important;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.35);
         padding: 24px 26px !important;
-        margin-bottom: 22px !important;
+        margin-bottom: 20px !important;
     }
 
-    /* ── Metric cards (inside the metrics card, so keep them subtle) ── */
+    /* ── Metric cards ── */
     [data-testid="stMetric"] {
-        background: #f7f8fa;
-        border: 1px solid #e5e7eb;
+        background: #0d1117;
+        border: 1px solid #21262d;
         border-radius: 12px;
         padding: 16px 18px;
     }
-    [data-testid="stMetricLabel"] { color: #6b7280 !important; font-size: 0.75rem !important; font-weight: 600 !important; }
-    [data-testid="stMetricValue"] { color: #111827 !important; font-size: 1.45rem !important; }
-    [data-testid="stMetricDelta"] { font-size: 0.8rem !important; }
+    [data-testid="stMetricLabel"] { color: #6e7681 !important; font-size: 0.73rem !important; font-weight: 600 !important; }
+    [data-testid="stMetricValue"] { color: #e6edf3 !important; font-size: 1.45rem !important; }
+    [data-testid="stMetricDelta"] { font-size: 0.78rem !important; }
 
-    /* ── Status pill (header) ── */
+    /* ── Status pill ── */
     .status-pill {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
-        padding: 16px 48px;
-        min-width: 320px;
+        padding: 14px 52px;
+        min-width: 300px;
         border-radius: 999px;
         font-weight: 700;
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         white-space: nowrap;
     }
-    .status-vape    { background: rgba(220,38,38,0.08);  border: 1px solid #dc2626; color: #b91c1c; }
-    .status-clean   { background: rgba(22,163,74,0.08);  border: 1px solid #16a34a; color: #15803d; }
-    .status-offline { background: rgba(107,114,128,0.08); border: 1px solid #d1d5db; color: #6b7280; }
-
-    /* ── Detection history cards ── */
-    .det-card {
-        background: #fef2f2;
-        border-left: 4px solid #dc2626;
-        border-radius: 6px;
-        padding: 10px 16px;
-        margin-bottom: 8px;
-        font-size: 0.88rem;
+    .status-vape {
+        background: rgba(248,81,73,0.12);
+        border: 1.5px solid rgba(248,81,73,0.5);
+        color: #ffa198;
+        box-shadow: 0 0 20px rgba(248,81,73,0.12);
     }
-    .det-time  { color: #b91c1c; font-weight: 700; }
-    .det-label { color: #6b7280; }
+    .status-clean {
+        background: rgba(63,185,80,0.10);
+        border: 1.5px solid rgba(63,185,80,0.4);
+        color: #56d364;
+        box-shadow: 0 0 20px rgba(63,185,80,0.10);
+    }
+    .status-offline {
+        background: rgba(110,118,129,0.10);
+        border: 1.5px solid #30363d;
+        color: #6e7681;
+    }
+
+    /* ── Dataframe ── */
+    [data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
 
     /* ── Tabs ── */
-    .stTabs [data-baseweb="tab-list"]  { background: #f1f3f5; border-radius: 10px; gap: 4px; padding: 4px; }
-    .stTabs [data-baseweb="tab"]       { background: transparent; color: #6b7280; border-radius: 8px; }
-    .stTabs [data-baseweb="tab"] p     { color: inherit; }
-    .stTabs [aria-selected="true"]     { background: #ffffff !important; color: #111827 !important; box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
-
-    /* ── Node status pills ── */
-    .node-card {
-        background: #f7f8fa;
-        border: 1px solid #e5e7eb;
+    .stTabs [data-baseweb="tab-list"] {
+        background: #0d1117;
         border-radius: 10px;
-        padding: 10px 16px;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid #21262d;
+    }
+    .stTabs [data-baseweb="tab"]      { background: transparent; color: #6e7681; border-radius: 8px; font-size: 0.85rem; }
+    .stTabs [data-baseweb="tab"] p    { color: inherit !important; }
+    .stTabs [aria-selected="true"]    { background: #21262d !important; color: #e6edf3 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+    /* ── Node status cards ── */
+    .node-card {
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 10px;
+        padding: 11px 16px;
         margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 0.85rem;
-        color: #1a1f29;
+        font-size: 0.84rem;
+        color: #8b949e;
     }
-    .pill-red   { color: #dc2626; font-weight: 700; }
-    .pill-green { color: #16a34a; font-weight: 700; }
+    .pill-red   { color: #ffa198; font-weight: 700; }
+    .pill-green { color: #56d364; font-weight: 700; }
+    .pill-dot-red   { display:inline-block; width:7px; height:7px; border-radius:50%; background:#f85149; margin-right:5px; }
+    .pill-dot-green { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; margin-right:5px; }
+
+    /* ── Map legend ── */
+    .map-legend {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+        font-size: 0.78rem;
+        color: #6e7681;
+    }
+    .legend-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
 
     /* ── Misc ── */
-    hr { border-color: #e5e7eb; }
-    [data-testid="stCaptionContainer"] { color: #6b7280; }
-    p, span, div { }
+    hr { border-color: #21262d; }
+    p, li { color: #8b949e; }
+    [data-testid="stCaptionContainer"] { color: #484f58 !important; }
+    .stAlert { border-radius: 10px; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -181,9 +210,6 @@ def load_sensor_data():
 
 df = load_sensor_data()
 
-# ─────────────────────────────────────────────
-# GUARD: no data
-# ─────────────────────────────────────────────
 if df.empty:
     st.warning("No data available. Check your Google Sheets connection.")
     st.stop()
@@ -192,7 +218,7 @@ latest   = df.iloc[0]
 previous = df.iloc[1] if len(df) > 1 else latest
 
 # ─────────────────────────────────────────────
-# RUN MODEL PREDICTION
+# RUN MODEL
 # ─────────────────────────────────────────────
 prediction   = None
 confidence   = None
@@ -202,22 +228,41 @@ if my_model:
     try:
         latest_features = latest[FEATURE_COLS].to_frame().T.rename(columns=MAPPING_DICT)
         prediction = int(my_model.predict(latest_features)[0])
-
         if hasattr(my_model, "predict_proba"):
             proba      = my_model.predict_proba(latest_features)[0]
             confidence = float(proba[prediction]) * 100
-
         df["is_vape"] = my_model.predict(all_features)
     except Exception as e:
         st.error(f"Prediction error: {e}")
 
 # ─────────────────────────────────────────────
-# HERO / HEADER CARD  (title + live status pill)
+# SENSOR DATA FOR MAP
+# ─────────────────────────────────────────────
+live_state = 1 if prediction == 1 else 0
+
+mock_sensors = pd.DataFrame({
+    "sensor_id":    ["SN-01", "SN-02", "SN-03", "SN-04"],
+    "location":     ["Main Lobby", "East Restroom", "Breakroom", "Stairwell B"],
+    "lat":          [BASE_LAT + 0.0004, BASE_LAT + 0.0004, BASE_LAT - 0.0005, BASE_LAT + 0.0002],
+    "lon":          [BASE_LON,          BASE_LON - 0.0006,  BASE_LON - 0.0002, BASE_LON + 0.0005],
+    "vape_detected":[live_state, 0, 0, 0],
+})
+mock_sensors["status_text"] = mock_sensors["vape_detected"].map(
+    {1: "Vape Detected", 0: "Clean"}
+)
+# RGBA as lists — used directly by pydeck ScatterplotLayer
+mock_sensors["fill_r"] = mock_sensors["vape_detected"].map({1: 248, 0: 63})
+mock_sensors["fill_g"] = mock_sensors["vape_detected"].map({1: 81,  0: 185})
+mock_sensors["fill_b"] = mock_sensors["vape_detected"].map({1: 73,  0: 80})
+
+# ─────────────────────────────────────────────
+# HERO CARD
 # ─────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2;color:#1a1f29'>Vapo noWay</div>"
-        "<div style='text-align:center;color:#6b7280;font-size:0.95rem;margin-top:2px;margin-bottom:18px'>"
+        "<div style='text-align:center;font-size:3rem;font-weight:800;line-height:1.1;color:#e6edf3;letter-spacing:-1px'>"
+        "Aurafarm</div>"
+        "<div style='text-align:center;color:#6e7681;font-size:0.95rem;margin-top:6px;margin-bottom:20px'>"
         "Facility Air Quality Monitor</div>",
         unsafe_allow_html=True,
     )
@@ -231,22 +276,24 @@ with st.container(border=True):
     elif prediction == 1:
         conf_str = f" · {confidence:.0f}%" if confidence else ""
         st.markdown(
-            f"<div style='text-align:center'><span class='status-pill status-vape'>"
-            f"Vape Detected{conf_str}</span><br>"
-            f"<span style='color:#6b7280;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
+            f"<div style='text-align:center'>"
+            f"<span class='status-pill status-vape'>🚨 Vape Detected{conf_str}</span><br>"
+            f"<span style='color:#484f58;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
     else:
         conf_str = f" · {confidence:.0f}%" if confidence else ""
         st.markdown(
-            f"<div style='text-align:center'><span class='status-pill status-clean'>"
-            f"✅ Air Quality Clean{conf_str}</span><br>"
-            f"<span style='color:#6b7280;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
+            f"<div style='text-align:center'>"
+            f"<span class='status-pill status-clean'>✅ Air Quality Clean{conf_str}</span><br>"
+            f"<span style='color:#484f58;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
 # ─────────────────────────────────────────────
-# METRIC CARDS  (with deltas vs previous reading)
+# METRIC CARDS
 # ─────────────────────────────────────────────
 def safe_delta(col):
     try:
@@ -257,13 +304,13 @@ def safe_delta(col):
 with st.container(border=True):
     st.markdown("<div class='eyebrow'>Live Readings</div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
-    c1.metric(" TVOC",     f"{latest['TVOC']} ppb",     delta=safe_delta("TVOC"),  delta_color="inverse")
-    c2.metric(" PM 2.5",   f"{latest['PM2.5']} μg/m³",  delta=safe_delta("PM2.5"), delta_color="inverse")
-    c3.metric(" eCO₂",     f"{latest['eCO2']} ppm",     delta=safe_delta("eCO2"),  delta_color="inverse")
-    c4.metric(" MQ7",      f"{latest['CH0']}",          delta=safe_delta("CH0"),   delta_color="inverse")
-    c5.metric(" MQ135",    f"{latest['MQ135']}",        delta=safe_delta("MQ135"), delta_color="inverse")
-    c6.metric(" Temp",     f"{latest['Temp']} °C",      delta=safe_delta("Temp"))
-    c7.metric(" Humidity", f"{latest['Humidity']} %",   delta=safe_delta("Humidity"))
+    c1.metric("TVOC",     f"{latest['TVOC']} ppb",    delta=safe_delta("TVOC"),     delta_color="inverse")
+    c2.metric("PM 2.5",   f"{latest['PM2.5']} μg/m³", delta=safe_delta("PM2.5"),    delta_color="inverse")
+    c3.metric("eCO₂",     f"{latest['eCO2']} ppm",    delta=safe_delta("eCO2"),     delta_color="inverse")
+    c4.metric("MQ7",      f"{latest['CH0']}",         delta=safe_delta("CH0"),      delta_color="inverse")
+    c5.metric("MQ135",    f"{latest['MQ135']}",       delta=safe_delta("MQ135"),    delta_color="inverse")
+    c6.metric("Temp",     f"{latest['Temp']} °C",     delta=safe_delta("Temp"))
+    c7.metric("Humidity", f"{latest['Humidity']} %",  delta=safe_delta("Humidity"))
 
 # ─────────────────────────────────────────────
 # DETECTION HISTORY  +  FACILITY MAP
@@ -300,23 +347,25 @@ with col_hist:
                     use_container_width=True,
                     hide_index=True,
                     column_config={
-                        "Date":        st.column_config.TextColumn("Date"),
-                        "Start":       st.column_config.TextColumn("Start"),
-                        "End":         st.column_config.TextColumn("End"),
-                        "Duration":    st.column_config.TextColumn("Duration"),
-                        "Peak TVOC":   st.column_config.TextColumn("Peak TVOC"),
-                        "Peak PM2.5":  st.column_config.TextColumn("Peak PM2.5"),
+                        "Date":       st.column_config.TextColumn("Date"),
+                        "Start":      st.column_config.TextColumn("Start"),
+                        "End":        st.column_config.TextColumn("End"),
+                        "Duration":   st.column_config.TextColumn("Duration"),
+                        "Peak TVOC":  st.column_config.TextColumn("Peak TVOC"),
+                        "Peak PM2.5": st.column_config.TextColumn("Peak PM2.5"),
                     },
                 )
                 st.caption(f"{len(events_df)} detection event(s) in available data.")
             else:
                 st.markdown(
-                    "<div style='color:#6b7280;padding:24px 0'>No vape events detected in the available data.</div>",
+                    "<div style='color:#484f58;padding:28px 0;text-align:center;font-size:0.85rem'>"
+                    "No vape events detected in the available data.</div>",
                     unsafe_allow_html=True,
                 )
         else:
             st.markdown(
-                "<div style='color:#6b7280;padding:24px 0'>Detection system offline — history unavailable.</div>",
+                "<div style='color:#484f58;padding:28px 0;text-align:center;font-size:0.85rem'>"
+                "Detection system offline — history unavailable.</div>",
                 unsafe_allow_html=True,
             )
 
@@ -324,58 +373,81 @@ with col_map:
     with st.container(border=True):
         st.markdown("<div class='eyebrow'>Facility Sensor Network</div>", unsafe_allow_html=True)
 
-        live_state = 1 if prediction == 1 else 0
-
-        mock_sensors = pd.DataFrame({
-            "sensor_id":    ["SN-01 (Main Lobby)", "SN-02 (East Restroom)", "SN-03 (Breakroom)", "SN-04 (Stairwell B)"],
-            "latitude":     [BASE_LAT + 0.0004,    BASE_LAT + 0.0004,       BASE_LAT - 0.0005,   BASE_LAT + 0.0002],
-            "longitude":    [BASE_LON,              BASE_LON - 0.0006,       BASE_LON - 0.0002,   BASE_LON + 0.0005],
-            "vape_detected":[live_state,            0,                        0,                   0],
-            "air_quality":  [
-                "⚠ Vape Detected" if live_state else "✅ Clean",
-                "✅ Clean",
-                "✅ Clean",
-                "✅ Clean",
-            ],
-        })
-        mock_sensors["color"] = mock_sensors["vape_detected"].map(
-            {1: [220, 38, 38, 220], 0: [22, 163, 74, 220]}
-        )
-
-        layer = pdk.Layer(
+        # ── Glow halo (large translucent ring behind each dot) ──
+        halo_layer = pdk.Layer(
             "ScatterplotLayer",
             data=mock_sensors,
-            get_position=["longitude", "latitude"],
-            get_fill_color="color",
-            get_radius=6,
+            get_position=["lon", "lat"],
+            get_fill_color=["fill_r", "fill_g", "fill_b", 50],
+            get_radius=14,
             radius_units="meters",
-            radius_min_pixels=6,
-            radius_max_pixels=18,
-            pickable=True,
-        )
-        view_state = pdk.ViewState(latitude=BASE_LAT, longitude=BASE_LON, zoom=16.5, pitch=0)
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[layer],
-                initial_view_state=view_state,
-                map_style="light",
-                tooltip={"text": "Sensor: {sensor_id}\nStatus: {air_quality}"},
-            )
+            radius_min_pixels=12,
+            radius_max_pixels=24,
+            pickable=False,
         )
 
-        st.markdown("**Live Node Status**")
+        # ── Solid centre dot ──
+        dot_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=mock_sensors,
+            get_position=["lon", "lat"],
+            get_fill_color=["fill_r", "fill_g", "fill_b", 230],
+            get_radius=5,
+            radius_units="meters",
+            radius_min_pixels=5,
+            radius_max_pixels=12,
+            pickable=True,
+            stroked=True,
+            get_line_color=[255, 255, 255, 80],
+            line_width_min_pixels=1,
+        )
+
+        view_state = pdk.ViewState(
+            latitude=BASE_LAT,
+            longitude=BASE_LON,
+            zoom=17,
+            pitch=0,
+            bearing=0,
+        )
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[halo_layer, dot_layer],
+                initial_view_state=view_state,
+                map_style="dark",
+                tooltip={"text": "{sensor_id} — {location}\nStatus: {status_text}"},
+            ),
+            height=310,
+        )
+
+        # Legend
+        st.markdown(
+            "<div class='map-legend'>"
+            "<span><span class='legend-dot' style='background:#3fb950'></span>Clean</span>"
+            "<span><span class='legend-dot' style='background:#f85149'></span>Vape Detected</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        # Node status list
+        st.markdown("<div style='margin-top:14px'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='eyebrow'>Live Node Status</div>", unsafe_allow_html=True)
         for _, row in mock_sensors.iterrows():
-            pill_class = "pill-red" if row["vape_detected"] else "pill-green"
+            if row["vape_detected"]:
+                pill = "<span class='pill-red'><span class='pill-dot-red'></span>Vape Detected</span>"
+            else:
+                pill = "<span class='pill-green'><span class='pill-dot-green'></span>Clean</span>"
             st.markdown(
                 f"<div class='node-card'>"
-                f"<span>{row['sensor_id']}</span>"
-                f"<span class='{pill_class}'>{row['air_quality']}</span>"
+                f"<div><b style='color:#c9d1d9'>{row['sensor_id']}</b>"
+                f"<span style='color:#484f58;margin-left:8px;font-size:0.8rem'>{row['location']}</span></div>"
+                f"{pill}"
                 f"</div>",
                 unsafe_allow_html=True,
             )
 
 # ─────────────────────────────────────────────
-# TREND CHARTS  (uses fixed HOURS_BACK window)
+# TREND CHARTS
 # ─────────────────────────────────────────────
 chart_data = df.sort_values("Sort_Time", ascending=True).copy()
 cutoff     = chart_data["Sort_Time"].max() - pd.Timedelta(hours=HOURS_BACK)
@@ -395,8 +467,10 @@ if my_model and "is_vape" in df.columns:
     chart_data = chart_data.join(vape_overlay, how="left")
 
 with st.container(border=True):
-    st.markdown(f"<div class='eyebrow'>Sensor Trends · Last {HOURS_BACK} Hours</div>", unsafe_allow_html=True)
-
+    st.markdown(
+        f"<div class='eyebrow'>Sensor Trends · Last {HOURS_BACK} Hours</div>",
+        unsafe_allow_html=True,
+    )
     tab1, tab2, tab3, tab4 = st.tabs(["🟤 Particles", "🌫 Air Quality", "🌡 Climate", "📊 All Sensors"])
 
     with tab1:
@@ -423,7 +497,7 @@ with st.container(border=True):
 # FOOTER
 # ─────────────────────────────────────────────
 st.markdown(
-    "<div style='text-align:center;color:#6b7280;font-size:0.78rem;padding:8px 0'>"
+    "<div style='text-align:center;color:#484f58;font-size:0.78rem;padding:8px 0'>"
     "Aurafarm AI · Auto-refreshes every 30 s · "
     "Sensor data streamed from Google Sheets"
     "</div>",

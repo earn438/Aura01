@@ -164,15 +164,10 @@ df = load_sensor_data()
 # SIDEBAR
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🌿 Aurafarm AI")
+    st.markdown("## Aurafarm AI")
     st.markdown("<small style='color:#8b949e'>Environmental Monitor</small>", unsafe_allow_html=True)
     st.divider()
 
-    if not df.empty:
-        last_ts = pd.to_datetime(df["Display_Time"].iloc[0])
-        st.markdown(f"**Last reading**")
-        st.markdown(f"<span style='color:#58a6ff'>{last_ts.strftime('%Y-%m-%d %H:%M:%S')}</span>", unsafe_allow_html=True)
-        st.markdown(f"<small style='color:#8b949e'>Auto-refreshes every 30 s</small>", unsafe_allow_html=True)
 
     st.divider()
     st.markdown("**Model**")

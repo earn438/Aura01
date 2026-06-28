@@ -39,7 +39,7 @@ st.markdown(
     """
     <style>
     /* ── Base canvas ── */
-    [data-testid="stAppViewContainer"] { background: #ffffff; color: #1a1f29; }
+    [data-testid="stAppViewContainer"] { background: #fffff7; color: #1a1f29; }
     [data-testid="stHeader"]           { background: transparent; }
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1280px; }
 

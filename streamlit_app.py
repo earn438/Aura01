@@ -33,13 +33,13 @@ COLUMN_RENAME  = {
 # ─────────────────────────────────────────────
 # PAGE CONFIG & GLOBAL CSS
 # ─────────────────────────────────────────────
-st.set_page_config(page_title=MODEL_NAME, layout="wide")
+st.set_page_config(page_title=MODEL_NAME, page_icon="🌿", layout="wide")
 
 st.markdown(
     """
     <style>
     /* ── Base canvas ── */
-    [data-testid="stAppViewContainer"] { background: #0b0e14; color: #e6edf3; }
+    [data-testid="stAppViewContainer"] { background: #fffffa; color: #e6edf3; }
     [data-testid="stHeader"]           { background: transparent; }
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1280px; }
 
@@ -212,7 +212,7 @@ if my_model:
 # ─────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2'>Vapo noWay</div>"
+        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2'>🌿 Vapo noWay</div>"
         "<div style='text-align:center;color:#8b949e;font-size:0.95rem;margin-top:2px;margin-bottom:18px'>"
         "Facility Air Quality Monitor</div>",
         unsafe_allow_html=True,
@@ -228,7 +228,7 @@ with st.container(border=True):
         conf_str = f" · {confidence:.0f}%" if confidence else ""
         st.markdown(
             f"<div style='text-align:center'><span class='status-pill status-vape'>"
-            f"Vape Detected{conf_str}</span><br>"
+            f"🚨 Vape Detected{conf_str}</span><br>"
             f"<span style='color:#6e7681;font-size:0.78rem'>as of {latest['Display_Time'].strftime('%H:%M:%S')}</span></div>",
             unsafe_allow_html=True,
         )

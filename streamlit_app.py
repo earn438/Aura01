@@ -17,6 +17,7 @@ SHEET_URL   = (
 BASE_LAT    = 18.5847
 BASE_LON    = 99.0256
 REFRESH_MS  = 30_000   # auto-refresh every 30 seconds
+HOURS_BACK  = 24        # fixed trend-chart window (sidebar slider removed)
 
 FEATURE_COLS   = ["TVOC", "eCO2", "Temp", "Humidity", "PM2.5", "CH0", "CH3", "MQ135"]
 MAPPING_DICT   = {
@@ -39,7 +40,6 @@ st.markdown(
     <style>
     /* ── Base ── */
     [data-testid="stAppViewContainer"] { background: #0d1117; color: #e6edf3; }
-    [data-testid="stSidebar"]          { background: #161b22; border-right: 1px solid #21262d; }
     [data-testid="stHeader"]           { background: transparent; }
 
     /* ── Typography ── */
@@ -161,31 +161,6 @@ def load_sensor_data():
 df = load_sensor_data()
 
 # ─────────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("## Aurafarm AI")
-    st.markdown("<small style='color:#8b949e'>Environmental Monitor</small>", unsafe_allow_html=True)
-    st.divider()
-
-
-    st.divider()
-    st.markdown("**Model**")
-    model_status = "✅ Online" if my_model else "⚠️ Offline"
-    st.markdown(model_status)
-    if my_model:
-        st.markdown(f"<small style='color:#8b949e'>{type(my_model).__name__}</small>", unsafe_allow_html=True)
-
-    st.divider()
-    st.markdown("**Data window**")
-    hours_back = st.slider("Hours to display", min_value=1, max_value=72, value=24, step=1)
-
-    st.divider()
-    if st.button("🔄 Refresh now"):
-        st.cache_data.clear()
-        st.rerun()
-
-# ─────────────────────────────────────────────
 # GUARD: no data
 # ─────────────────────────────────────────────
 if df.empty:
@@ -219,6 +194,13 @@ if my_model:
 # PAGE HEADER
 # ─────────────────────────────────────────────
 st.markdown("## Vapo noWay — Facility Monitor")
+
+# ── Refresh control (moved from sidebar) ──────
+header_left, header_right = st.columns([5, 1])
+with header_right:
+    if st.button("🔄 Refresh now", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
 # ── Status banner ──────────────────────────────
 if prediction is None:
@@ -377,12 +359,12 @@ with col_map:
 st.divider()
 
 # ─────────────────────────────────────────────
-# TREND CHARTS  (respect sidebar hours_back)
+# TREND CHARTS  (uses fixed HOURS_BACK window)
 # ─────────────────────────────────────────────
-st.markdown(f"### 📈 Sensor Trends — Last {hours_back} Hours")
+st.markdown(f"### 📈 Sensor Trends — Last {HOURS_BACK} Hours")
 
 chart_data = df.sort_values("Sort_Time", ascending=True).copy()
-cutoff     = chart_data["Sort_Time"].max() - pd.Timedelta(hours=hours_back)
+cutoff     = chart_data["Sort_Time"].max() - pd.Timedelta(hours=HOURS_BACK)
 chart_data = chart_data[chart_data["Sort_Time"] >= cutoff].set_index("Sort_Time")
 numeric_cols = chart_data.select_dtypes(include="number").columns
 chart_data   = chart_data[numeric_cols].resample("1min").mean().interpolate(method="time")

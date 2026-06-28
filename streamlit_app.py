@@ -212,7 +212,7 @@ if my_model:
 # ─────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2'>🌿 Vapo noWay</div>"
+        "<div style='text-align:center;font-size:1.7rem;font-weight:800;line-height:1.2'>Vapo noWay</div>"
         "<div style='text-align:center;color:#8b949e;font-size:0.95rem;margin-top:2px;margin-bottom:18px'>"
         "Facility Air Quality Monitor</div>",
         unsafe_allow_html=True,
